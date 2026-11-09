@@ -755,16 +755,26 @@
     }
 
 
-    function coordinateFromChartPoint(time, price) {
+       function coordinateFromChartPoint(time, price) {
         if (!chart || !candleSeries) {
             return null;
         }
 
-        const x =
+        let x =
             chart.timeScale().timeToCoordinate(time);
 
         const y =
             candleSeries.priceToCoordinate(price);
+
+        // اگر مختصات افقی خارج از دید شد، برای جلوگیری از ناپدید شدن کامل خط، آن را روی لبه‌های بوم محدود می‌کنیم
+        if (x === null && chart.timeScale().getVisibleRange()) {
+            const range = chart.timeScale().getVisibleRange();
+            if (time < range.from) {
+                x = 0;
+            } else if (time > range.to) {
+                x = chartContainer.clientWidth;
+            }
+        }
 
         if (
             x === null ||
@@ -780,6 +790,7 @@
             y
         };
     }
+
 
 
     function distanceToSegment(point, start, end) {
@@ -1239,7 +1250,8 @@
         finishPointer
     );
 
-    function duplicateSelectedLine() {
+
+        function duplicateSelectedLine() {
         if (
             selectedLineIndex === null ||
             !lines[selectedLineIndex]
@@ -1306,7 +1318,7 @@
         setStatus('یک کپی از خط ساخته شد.');
     }
 
-    
+
     function deleteSelectedLine() {
         if (
             selectedLineIndex === null ||
