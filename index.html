@@ -8,29 +8,34 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;700&display=swap');
-        * { font-family: 'Vazirmatn', sans-serif; }
+        * { font-family: 'Vazirmatn', sans-serif; box-sizing: border-box; }
         body { margin: 0; background: #0e0e10; color: #d1d4dc; }
+        .version-badge {
+            background: #f59e0b; color: #000; font-weight: bold;
+            font-size: 11px; padding: 3px 8px; border-radius: 4px;
+        }
         .header { display: flex; align-items: center; justify-content: space-between;
-                  padding: 14px 20px; border-bottom: 1px solid #1e222d; flex-wrap: wrap; gap: 10px; }
-        .btn { background: #2962ff; color: #fff; border: none; padding: 10px 20px;
-               border-radius: 8px; cursor: pointer; font-size: 14px; transition: .2s; }
+                  padding: 12px 20px; border-bottom: 1px solid #1e222d; flex-wrap: wrap; gap: 10px; }
+        .btn { background: #2962ff; color: #fff; border: none; padding: 9px 18px;
+               border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 500; transition: .2s; }
         .btn:hover { background: #1e53e5; }
         .tf-btn { background: transparent; color: #787b86; border: 1px solid #2a2e39;
-                  padding: 5px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; }
+                  padding: 4px 10px; border-radius: 6px; cursor: pointer; font-size: 12px; }
         .tf-btn.active { background: #2962ff; color: #fff; border-color: #2962ff; }
-        #chart { width: 100%; height: 520px; }
-        .legend { font-size: 13px; padding: 10px 20px; color: #787b86; direction: ltr; text-align: left; }
+        #chart { width: 100%; height: 500px; }
+        .legend { font-size: 13px; padding: 8px 20px; color: #787b86; direction: ltr; text-align: left; }
         .legend span { margin-inline-end: 14px; }
         .up { color: #26a69a; } .down { color: #ef5350; }
     </style>
 </head>
 <body>
     <div class="header">
-        <div style="display:flex; gap:8px; align-items:center;">
+        <div style="display:flex; gap:10px; align-items:center;">
             <button class="btn" onclick="document.getElementById('csvFile').click()">
                 📂 انتخاب فایل CSV متاتریدر
             </button>
             <input type="file" id="csvFile" accept=".csv,.txt" style="display:none">
+            <span class="version-badge">نسخه ۳.۰ (آپدیت جدید)</span>
         </div>
         <div style="display:flex; gap:6px;">
             <button class="tf-btn active" data-tf="60">M1</button>
@@ -51,83 +56,74 @@ document.getElementById('csvFile').addEventListener('change', function(e) {
     if (!file) return;
     
     Papa.parse(file, {
-        header: false, // بدون هدر می‌خوانیم تا به آرایه خطوط دسترسی مستقیم داشته باشیم
+        header: false,
         skipEmptyLines: true,
         complete: r => processCSV(r.data)
     });
 });
 
 function processCSV(rows) {
-    if (rows.length < 2) {
-        alert('فایل خالی یا نامعتبر است.');
+    if (!rows || rows.length < 2) {
+        alert('نسخه ۳.۰: فایل شما خالی یا بسیار کوتاه است.');
         return;
     }
 
-    // تشخیص اینکه آیا ردیف اول هدر است یا داده
     let startIndex = 0;
     const firstRowStr = rows[0].join(' ').toLowerCase();
     if (firstRowStr.includes('open') || firstRowStr.includes('date') || firstRowStr.includes('time') || firstRowStr.includes('<')) {
-        startIndex = 1; // اگر هدر بود از خط دوم شروع کن
+        startIndex = 1;
     }
 
     candles = [];
     for (let i = startIndex; i < rows.length; i++) {
         const cols = rows[i];
-        if (cols.length < 5) continue; // حداقل ستون‌های لازم برای تاریخ، باز، بالا، پایین، بسته
+        if (cols.length < 5) continue;
 
-        // جستجو برای پیدا کردن تاریخ و اعداد در ستون‌ها
-        let dateStr = '', timeStr = '00:00', open = NaN, high = NaN, low = NaN, close = NaN;
-
-        // تلاش برای استخراج فیلدها بر اساس الگوهای متداول متاتریدر
+        let dateStr = '', timeStr = '00:00';
         let numIndices = [];
-        let dateIndex = -1;
 
-        cols.forEach((val, idx) => {
-            val = val.trim().replace(/["']/g, '');
+        cols.forEach((val) => {
+            val = String(val).trim().replace(/["']/g, '');
             if (!dateStr && (val.includes('.') || val.includes('-') || val.includes('/')) && val.length >= 8) {
-                dateIndex = idx;
                 dateStr = val.replace(/\./g, '-').replace(/\//g, '-');
             } else if (dateStr && timeStr === '00:00' && val.includes(':') && val.length <= 8) {
                 timeStr = val;
             } else {
                 let num = parseFloat(val);
                 if (!isNaN(num)) {
-                    numIndices.push({ idx, val: num });
+                    numIndices.push(num);
                 }
             }
         });
 
-        // اگر تاریخ پیدا نشد، ستون اول را به عنوان تاریخ در نظر بگیر
-        if (!dateStr && cols.length > 0) {
-            dateStr = cols[0].trim().replace(/\./g, '-');
-        }
-
-        // اگر اعداد پیدا شدند، آخرین عددها به ترتیب Open, High, Low, Close هستند
         if (numIndices.length >= 4) {
             const len = numIndices.length;
-            close = numIndices[len - 1].val;
-            low   = numIndices[len - 2].val;
-            high  = numIndices[len - 3].val;
-            open  = numIndices[len - 4].val;
-        }
+            const close = numIndices[len - 1];
+            const low   = numIndices[len - 2];
+            const high  = numIndices[len - 3];
+            const open  = numIndices[len - 4];
 
-        if (dateStr && !isNaN(close) && !isNaN(open)) {
-            let fullDateTime = dateStr + 'T' + (timeStr.length === 5 ? timeStr : '00:00') + 'Z';
-            let ts = Math.floor(new Date(fullDateTime).getTime() / 1000);
-            if (isNaN(ts)) ts = i; // اگر تاریخ استاندارد نبود از ایندکس استفاده کن
+            let ts;
+            if (dateStr) {
+                let fullDateTime = dateStr + 'T' + (timeStr.length === 5 ? timeStr : timeStr.slice(0,5)) + ':00Z';
+                ts = Math.floor(new Date(fullDateTime).getTime() / 1000);
+            }
+            if (isNaN(ts) || !ts) {
+                ts = Math.floor(Date.now() / 1000) - (rows.length - i) * 60;
+            }
 
             candles.push({ time: ts, open, high, low, close });
         }
     }
 
-    // حذف تکراری‌ها و مرتب‌سازی
-    candles = candles.filter((c, i, arr) => i === 0 || c.time > arr[i-1].time);
+    // مرتب‌سازی و حذف زمان‌های تکراری
     candles.sort((a, b) => a.time - b.time);
+    candles = candles.filter((c, idx, arr) => idx === 0 || c.time > arr[idx - 1].time);
 
     if (candles.length > 0) {
         drawChart();
     } else {
-        alert('فرمت فایل متاتریدر شناخته نشد. لطفاً مطمئن شوید خروجی به صورت فایل CSV استاندارد متاتریدر است.');
+        alert('نسخه ۳.۰: ساختار فایل خوانده نشد!\nخط اول فایل شما:\n' + JSON.stringify(rows[0]) + '\nخط دوم:\n' + JSON.stringify(rows[1]));
     }
 }
 
