@@ -1066,7 +1066,9 @@
             if (!chart || !candleSeries) {
                 return;
             }
-              // اگر نه در حالت رسم هستیم و نه روی خطی کلیک شده، از پوینت کپچر صرف‌نظر کنیم تا زوم و اسکرول چارت قفل نشود
+            
+            
+            // اگر نه در حالت رسم هستیم و نه روی خطی کلیک شده، از پوینت کپچر صرف‌نظر کنیم تا زوم و اسکرول چارت قفل نشود
             const checkCoord = getCanvasPoint(event);
             const isHit = hitTest(checkCoord);
             if (!drawingMode && !isHit) {
@@ -1256,7 +1258,7 @@
     );
 
 
-        function duplicateSelectedLine() {
+         function duplicateSelectedLine() {
         if (
             selectedLineIndex === null ||
             !lines[selectedLineIndex]
@@ -1268,10 +1270,34 @@
         const original =
             lines[selectedLineIndex];
 
-        // اصلاح محاسبه آفست زمانی بر اساس اختلاف زمان نقاط اصلی یا تایم‌فریم
-        let timeOffset = (original.time2 && original.time1) ? (original.time2 - original.time1) : (currentTf * 5);
-        if (timeOffset <= 0) {
-            timeOffset = currentTf * 5;
+        // امکان تنظیم فاصله افقی (تعداد کندل یا ضریب جابه‌جایی سمت راست) توسط کاربر
+        let userMultiplier = prompt('فاصله افقی کپی (ضریب یا تعداد کندل، پیش‌فرض: 5):', '5');
+        let multiplier = parseFloat(userMultiplier);
+        if (isNaN(multiplier) || multiplier <= 0) {
+            multiplier = 5;
+        }
+
+        const visibleRange =
+            chart.timeScale().getVisibleRange();
+
+        let timeOffset =
+            currentTf * multiplier;
+
+        if (
+            visibleRange &&
+            normalizeTime(visibleRange.from) !== null &&
+            normalizeTime(visibleRange.to) !== null
+        ) {
+            timeOffset =
+                Math.max(
+                    currentTf,
+                    Math.round(
+                        (
+                            normalizeTime(visibleRange.to) -
+                            normalizeTime(visibleRange.from)
+                        ) * (0.015 * (multiplier / 5))
+                    )
+                );
         }
 
         let priceOffset =
@@ -1318,7 +1344,7 @@
         );
 
         syncCanvasInteractivity();
-        redrawCanvas(); // اضافه شده برای تضمین رندر فوری روی بوم
+        redrawCanvas();
 
         setStatus('یک کپی از خط ساخته شد.');
     }
