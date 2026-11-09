@@ -24,7 +24,7 @@
         .version-badge { background: #8b5cf6; color: #fff; font-weight: bold; font-size: 11px; padding: 4px 8px; border-radius: 4px; }
         #chart-container { position: relative; width: 100vw; height: calc(100vh - 80px); }
         #chart { width: 100%; height: 100%; }
-        #drawingCanvas { position: absolute; top: 0; left: 0; pointer-events: none; width: 100%; height: 100%; }
+        #drawingCanvas { position: absolute; top: 0; left: 0; pointer-events: none; width: 100%; height: 100%; z-index: 10; }
         #drawingCanvas.active { pointer-events: auto; cursor: crosshair; }
         .legend { font-size: 12px; padding: 4px 12px; background: #131722; color: #787b86; direction: ltr; text-align: left; height: 24px; }
         .legend span { margin-inline-end: 12px; }
@@ -39,7 +39,7 @@
             <input type="file" id="csvFile" accept=".csv,.txt" style="display:none">
             <button class="btn btn-warning" onclick="document.getElementById('updateFile').click()">🔄 آپدیت کندل‌ها</button>
             <input type="file" id="updateFile" accept=".csv,.txt" style="display:none">
-            <span class="version-badge">نسخه ۵.۰ (خط‌کشی حرفه‌ای)</span>
+            <span class="version-badge">نسخه ۵.۱ (اصلاح ترسیم خط)</span>
         </div>
         <div class="group">
             <label style="font-size:11px;">ابزار خط:</label>
@@ -73,12 +73,11 @@
 
 <script>
 let chart, candleSeries, rawCandles = [], currentTf = 60;
-let lines = []; // آرایه نگهداری خطوط رسم شده بر اساس مختصات زمانی و قیمتی
+let lines = [];
 let isDrawingMode = false;
 let currentDrawing = null;
 let selectedLineIndex = null;
-let draggingAnchor = null; // 'p1', 'p2', 'all'
-let dragOffset = {x: 0, y: 0};
+let draggingAnchor = null;
 
 const canvas = document.getElementById('drawingCanvas');
 const ctx = canvas.getContext('2d');
@@ -180,6 +179,7 @@ function initChart() {
     });
 
     chart.timeScale().subscribeVisibleLogicalRangeChange(() => redrawCanvas());
+    chart.timeScale().subscribeVisibleTimeRangeChange(() => redrawCanvas());
     window.addEventListener('resize', resizeCanvas);
     resizeCanvas();
 }
@@ -224,7 +224,6 @@ function aggregate(data, sec) {
     return [...map.values()].sort((a, b) => a.time - b.time);
 }
 
-// سیستم ترسیم خطوط حرفه‌ای
 function toggleDrawingTool() {
     isDrawingMode = !isDrawingMode;
     const btn = document.getElementById('toolLineBtn');
@@ -259,7 +258,6 @@ canvas.addEventListener('mousedown', e => {
         return;
     }
 
-    // بررسی کلیک روی انکرها یا خطوط برای جابجایی
     selectedLineIndex = null;
     draggingAnchor = null;
     for (let i = lines.length - 1; i >= 0; i--) {
@@ -270,37 +268,40 @@ canvas.addEventListener('mousedown', e => {
 
         if (Math.hypot(p1.x - x, p1.y - y) < 10) { selectedLineIndex = i; draggingAnchor = 'p1'; break; }
         if (Math.hypot(p2.x - x, p2.y - y) < 10) { selectedLineIndex = i; draggingAnchor = 'p2'; break; }
-        if (isNearLine(x, y, p1, p2)) { selectedLineIndex = i; draggingAnchor = 'all'; dragOffset = {x, y}; break; }
+        if (isNearLine(x, y, p1, p2)) { selectedLineIndex = i; draggingAnchor = 'all'; break; }
     }
     redrawCanvas();
 });
 
 canvas.addEventListener('mousemove', e => {
-    if (!isDrawingMode && selectedLineIndex === null) return;
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
-    const time = chart.timeScale().coordinateToTime(x);
-    const price = candleSeries.coordinateToPrice(y);
 
     if (isDrawingMode && currentDrawing) {
-        if (time !== null && price !== null) { currentDrawing.time2 = time; currentDrawing.price2 = price; }
-        redrawCanvas();
-    } else if (selectedLineIndex !== null) {
-        const l = lines[selectedLineIndex];
-        if (draggingAnchor === 'p1' && time !== null && price !== null) { l.time1 = time; l.price1 = price; }
-        else if (draggingAnchor === 'p2' && time !== null && price !== null) { l.time2 = time; l.price2 = price; }
-        else if (draggingAnchor === 'all' && time !== null && price !== null) {
-            // جابجایی کل خط (نیاز به محاسبه اختلاف زمانی/قیمتی)
-            // برای سادگی در نسخه ۵: جابجایی با انکرها
+        const time = chart.timeScale().coordinateToTime(x);
+        const price = candleSeries.coordinateToPrice(y);
+        if (time !== null && price !== null) {
+            currentDrawing.time2 = time;
+            currentDrawing.price2 = price;
+            redrawCanvas();
         }
-        redrawCanvas();
+    } else if (!isDrawingMode && selectedLineIndex !== null && draggingAnchor) {
+        const time = chart.timeScale().coordinateToTime(x);
+        const price = candleSeries.coordinateToPrice(y);
+        const l = lines[selectedLineIndex];
+        if (time !== null && price !== null) {
+            if (draggingAnchor === 'p1') { l.time1 = time; l.price1 = price; }
+            else if (draggingAnchor === 'p2') { l.time2 = time; l.price2 = price; }
+            redrawCanvas();
+        }
     }
 });
 
 canvas.addEventListener('mouseup', () => { currentDrawing = null; });
+canvas.addEventListener('mouseleave', () => { currentDrawing = null; });
+
 canvas.addEventListener('dblclick', e => {
-    // دابل کلیک برای کپی کردن خط نزدیک به ماوس
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left, y = e.clientY - rect.top;
     for (let i = lines.length - 1; i >= 0; i--) {
@@ -308,8 +309,8 @@ canvas.addEventListener('dblclick', e => {
         const p2 = getCoords(lines[i].time2, lines[i].price2);
         if (p1 && p2 && isNearLine(x, y, p1, p2)) {
             const clone = JSON.parse(JSON.stringify(lines[i]));
-            clone.price1 += (lines[i].price1 * 0.01);
-            clone.price2 += (lines[i].price2 * 0.01);
+            clone.price1 += (lines[i].price1 * 0.005);
+            clone.price2 += (lines[i].price2 * 0.005);
             lines.push(clone);
             redrawCanvas();
             break;
@@ -355,7 +356,6 @@ function redrawCanvas() {
         ctx.lineTo(p2.x, p2.y);
         ctx.stroke();
 
-        // رسم انکرپوینت‌ها اگر انتخاب شده باشد
         if (idx === selectedLineIndex) {
             ctx.fillStyle = '#fff';
             ctx.beginPath(); ctx.arc(p1.x, p1.y, 5, 0, Math.PI * 2); ctx.fill();
@@ -365,7 +365,6 @@ function redrawCanvas() {
     });
 }
 
-// ذخیره و بازیابی پروژه (شامل کندل‌ها و ترسیمات)
 function saveProject() {
     const data = { rawCandles, lines };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
