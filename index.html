@@ -1066,7 +1066,12 @@
             if (!chart || !candleSeries) {
                 return;
             }
-
+              // اگر نه در حالت رسم هستیم و نه روی خطی کلیک شده، از پوینت کپچر صرف‌نظر کنیم تا زوم و اسکرول چارت قفل نشود
+            const checkCoord = getCanvasPoint(event);
+            const isHit = hitTest(checkCoord);
+            if (!drawingMode && !isHit) {
+                return;
+            }
             event.preventDefault();
 
             canvas.setPointerCapture(
