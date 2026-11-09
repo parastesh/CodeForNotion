@@ -3,153 +3,165 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>نمایشگر CSV در نوشن</title>
-    <!-- Tailwind CSS برای استایل‌دهی مدرن -->
-    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-    <!-- Chart.js برای رسم نمودار -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- PapaParse برای خواندن دقیق فایل CSV -->
+    <title>چارت کندل‌استیک متاتریدر</title>
+    <script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;700&display=swap');
-        body { font-family: 'Vazirmatn', sans-serif; }
+        * { font-family: 'Vazirmatn', sans-serif; }
+        body { margin: 0; background: #0e0e10; color: #d1d4dc; }
+        .header { display: flex; align-items: center; justify-content: space-between;
+                  padding: 14px 20px; border-bottom: 1px solid #1e222d; flex-wrap: wrap; gap: 10px; }
+        .btn { background: #2962ff; color: #fff; border: none; padding: 10px 20px;
+               border-radius: 8px; cursor: pointer; font-size: 14px; transition: .2s; }
+        .btn:hover { background: #1e53e5; }
+        .tf-btn { background: transparent; color: #787b86; border: 1px solid #2a2e39;
+                  padding: 5px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; }
+        .tf-btn.active { background: #2962ff; color: #fff; border-color: #2962ff; }
+        #chart { width: 100%; height: 520px; }
+        .legend { font-size: 13px; padding: 10px 20px; color: #787b86; direction: ltr; text-align: left; }
+        .legend span { margin-inline-end: 14px; }
+        .up { color: #26a69a; } .down { color: #ef5350; }
     </style>
 </head>
-<body class="bg-gray-50 text-gray-800 min-h-screen p-4 md:p-8">
-
-    <div class="max-w-4xl mx-auto space-y-6">
-        <!-- هدر و بخش آپلود -->
-        <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col md:flex-row items-center justify-between gap-4">
-            <div>
-                <h1 class="text-xl font-bold text-gray-900">تحلیلگر و نمایشگر فایل CSV</h1>
-                <p class="text-sm text-gray-500 mt-1">فایل CSV خود را انتخاب کنید تا جدول و نمودار آن رسم شود.</p>
-            </div>
-            
-            <label class="cursor-pointer bg-black hover:bg-gray-800 text-white text-sm font-medium px-5 py-2.5 rounded-xl transition-all shadow-sm flex items-center gap-2">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
-                انتخاب فایل CSV
-                <input type="file" id="csvFile" accept=".csv" class="hidden">
-            </label>
+<body>
+    <div class="header">
+        <div style="display:flex; gap:8px; align-items:center;">
+            <button class="btn" onclick="document.getElementById('csvFile').click()">
+                📂 انتخاب فایل CSV متاتریدر
+            </button>
+            <input type="file" id="csvFile" accept=".csv,.txt" style="display:none">
         </div>
-
-        <!-- بخش نمودار -->
-        <div id="chartContainer" class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hidden">
-            <h2 class="text-base font-semibold text-gray-800 mb-4">نمودار داده‌ها</h2>
-            <div class="relative h-72 w-full">
-                <canvas id="myChart"></canvas>
-            </div>
-        </div>
-
-        <!-- بخش جدول داده‌ها -->
-        <div id="tableContainer" class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hidden">
-            <div class="p-6 border-b border-gray-100">
-                <h2 class="text-base font-semibold text-gray-800">پیش‌نمایش جدول</h2>
-            </div>
-            <div class="overflow-x-auto max-h-96">
-                <table id="dataTable" class="w-full text-right border-collapse">
-                    <thead id="tableHead" class="bg-gray-50 text-xs font-semibold text-gray-600 sticky top-0"></thead>
-                    <tbody id="tableBody" class="divide-y divide-gray-100 text-sm text-gray-700"></tbody>
-                </table>
-            </div>
+        <div style="display:flex; gap:6px;">
+            <button class="tf-btn active" data-tf="60">M1</button>
+            <button class="tf-btn" data-tf="300">M5</button>
+            <button class="tf-btn" data-tf="900">M15</button>
+            <button class="tf-btn" data-tf="3600">H1</button>
+            <button class="tf-btn" data-tf="86400">D1</button>
         </div>
     </div>
+    <div id="chart"></div>
+    <div class="legend" id="legend"></div>
 
-    <script>
-        let myChartInstance = null;
+<script>
+let chart, candleSeries, candles = [], timeScale = 60;
 
-        document.getElementById('csvFile').addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (!file) return;
+// ---------- خواندن فایل ----------
+document.getElementById('csvFile').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    Papa.parse(file, {
+        header: true,
+        skipEmptyLines: true,
+        complete: r => buildCandles(r.data)
+    });
+});
 
-            Papa.parse(file, {
-                header: true,
-                skipEmptyLines: true,
-                complete: function(results) {
-                    const data = results.data;
-                    if (data.length === 0) {
-                        alert('فایل خالی است یا فرمت آن نامعتبر است.');
-                        return;
-                    }
+// ---------- تبدیل ردیف‌های متاتریدر به کندل ----------
+function buildCandles(rows) {
+    // پاکسازی کلیدها (حذف کاراکترهای اضافی مثل BOM و گیومه)
+    const keys = Object.keys(rows[0]).map(k => k.replace(/["\uFEFF']/g, '').trim());
+    const find = (names) => keys.find(k => names.some(n => k.toLowerCase().includes(n))) || null;
 
-                    renderTable(data);
-                    renderChart(data);
-                },
-                error: function(err) {
-                    alert('خطا در خواندن فایل: ' + err.message);
-                }
-            });
+    const kDate  = find(['date']);
+    const kTime  = find(['time']) && find(['date']) !== find(['time']) ? find(['time']) : null;
+    const kOpen  = find(['open']);
+    const kHigh  = find(['high']);
+    const kLow   = find(['low']);
+    const kClose = find(['close']) || kOpen; // اگر Close نبود، از Open استفاده کن
+
+    candles = rows.map(row => {
+        const get = key => key ? String(row[key] ?? row['"' + key + '"'] ?? '').replace(/["']/g, '').trim() : '';
+        // تاریخ متاتریدر معمولاً 2024.01.15 است → به 2024-01-15 تبدیل می‌شود
+        const d = get(kDate).replace(/\./g, '-');
+        const t = kTime ? get(kTime) : '00:00';
+        const ts = Math.floor(new Date(d + 'T' + (t.length === 5 ? t : t + ':00') + 'Z').getTime() / 1000);
+        return {
+            time: ts,
+            open:  +get(kOpen),
+            high:  +get(kHigh),
+            low:   +get(kLow),
+            close: +get(kClose)
+        };
+    })
+    .filter(c => !isNaN(c.time) && !isNaN(c.close))
+    .sort((a, b) => a.time - b.time);
+
+    // حذف تکراری‌ها
+    candles = candles.filter((c, i, arr) => i === 0 || c.time > arr[i-1].time);
+
+    if (candles.length) drawChart();
+    else alert('ستون‌های OHLC در فایل پیدا نشدند. مطمئن شوید خروجی از MetaTrader با گزینه Bars است.');
+}
+
+// ---------- رسم چارت ----------
+function drawChart() {
+    if (!chart) {
+        chart = LightweightCharts.createChart(document.getElementById('chart'), {
+            layout: { background: { color: '#0e0e10' }, textColor: '#787b86' },
+            grid: {
+                vertLines: { color: '#1a1c22' },
+                horzLines: { color: '#1a1c22' }
+            },
+            crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
+            rightPriceScale: { borderColor: '#2a2e39' },
+            timeScale: { borderColor: '#2a2e39', timeVisible: true, secondsVisible: false },
         });
 
-        function renderTable(data) {
-            const keys = Object.keys(data[0]);
-            const thead = document.getElementById('tableHead');
-            const tbody = document.getElementById('tableBody');
-            
-            thead.innerHTML = '';
-            tbody.innerHTML = '';
+        candleSeries = chart.addCandlestickSeries({
+            upColor: '#26a69a', downColor: '#ef5350',
+            borderUpColor: '#26a69a', borderDownColor: '#ef5350',
+            wickUpColor: '#26a69a', wickDownColor: '#ef5350',
+        });
 
-            // ایجاد هدر جدول
-            let headRow = '<tr>';
-            keys.forEach(key => {
-                headRow += `<th class="p-3">${key}</th>`;
-            });
-            headRow += '</tr>';
-            thead.innerHTML = headRow;
+        // نمایش قیمت و رنگ کندل زیر نشانگر ماوس
+        chart.subscribeCrosshairMove(param => {
+            const c = param.seriesData.get(candleSeries);
+            const el = document.getElementById('legend');
+            if (!c) { el.innerHTML = ''; return; }
+            const cls = c.close >= c.open ? 'up' : 'down';
+            el.innerHTML = `
+                <span>${new Date(c.time * 1000).toISOString().slice(0,16).replace('T',' ')}</span>
+                <span>O <b class="${cls}">${c.open}</b></span>
+                <span>H <b class="${cls}">${c.high}</b></span>
+                <span>L <b class="${cls}">${c.low}</b></span>
+                <span>C <b class="${cls}">${c.close}</b></span>`;
+        });
+    }
 
-            // ایجاد ردیف‌های جدول (حداکثر ۱۰۰ سطر برای سرعت بالاتر)
-            data.slice(0, 100).forEach(row => {
-                let tr = '<tr class="hover:bg-gray-50 transition-colors">';
-                keys.forEach(key => {
-                    tr += `<td class="p-3">${row[key] !== undefined ? row[key] : ''}</td>`;
-                });
-                tr += '</tr>';
-                tbody.innerHTML += tr;
-            });
+    candleSeries.setData(candles);
+    chart.timeScale().fitContent();
+}
 
-            document.getElementById('tableContainer').classList.remove('hidden');
+// ---------- انتخاب تایم‌فریم نمایشی (فشرده‌سازی کندل‌ها) ----------
+document.querySelectorAll('.tf-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('.tf-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        timeScale = +btn.dataset.tf;
+        if (candles.length) {
+            candleSeries.setData(aggregate(candles, timeScale));
+            chart.timeScale().fitContent();
         }
+    });
+});
 
-        function renderChart(data) {
-            const keys = Object.keys(data[0]);
-            // ستون اول به عنوان برچسب (محور X) و ستون دوم به عنوان مقدار عددی (محور Y) در نظر گرفته می‌شود
-            const labelKey = keys[0];
-            const valueKey = keys[1] || keys[0];
-
-            const labels = data.map(row => row[labelKey]);
-            const values = data.map(row => parseFloat(row[valueKey]) || 0);
-
-            const ctx = document.getElementById('myChart').getContext('2d');
-            
-            if (myChartInstance) {
-                myChartInstance.destroy();
-            }
-
-            myChartInstance = new Chart(ctx, {
-                type: 'bar', // نوع نمودار: می‌توانید به 'line' هم تغییر دهید
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: valueKey,
-                        data: values,
-                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                        borderRadius: 6
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: false }
-                    },
-                    scales: {
-                        x: { grid: { display: false } },
-                        y: { grid: { color: '#f3f4f6' } }
-                    }
-                }
-            });
-
-            document.getElementById('chartContainer').classList.remove('hidden');
+// ادغام کندل‌های تکی در تایم‌فریم بزرگ‌تر (اگر فایل M1 باشد و H1 انتخاب شود)
+function aggregate(data, sec) {
+    if (sec <= 60) return data;
+    const map = new Map();
+    data.forEach(c => {
+        const bucket = Math.floor(c.time / sec) * sec;
+        if (!map.has(bucket)) map.set(bucket, { ...c, time: bucket });
+        else {
+            const b = map.get(bucket);
+            b.high = Math.max(b.high, c.high);
+            b.low  = Math.min(b.low, c.low);
+            b.close = c.close;
         }
-    </script>
+    });
+    return [...map.values()].sort((a, b) => a.time - b.time);
+}
+</script>
 </body>
 </html>
