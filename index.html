@@ -9,23 +9,23 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;700&display=swap');
         * { font-family: 'Vazirmatn', sans-serif; box-sizing: border-box; }
-        body { margin: 0; background: #0e0e10; color: #d1d4dc; }
+        body { margin: 0; background: #131722; color: #d1d4dc; overflow: hidden; }
         .version-badge {
-            background: #f59e0b; color: #000; font-weight: bold;
-            font-size: 11px; padding: 3px 8px; border-radius: 4px;
+            background: #10b981; color: #fff; font-weight: bold;
+            font-size: 11px; padding: 4px 8px; border-radius: 4px;
         }
         .header { display: flex; align-items: center; justify-content: space-between;
-                  padding: 12px 20px; border-bottom: 1px solid #1e222d; flex-wrap: wrap; gap: 10px; }
-        .btn { background: #2962ff; color: #fff; border: none; padding: 9px 18px;
-               border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 500; transition: .2s; }
+                  padding: 10px 16px; background: #1e222d; border-bottom: 1px solid #2a2e39; flex-wrap: wrap; gap: 8px; }
+        .btn { background: #2962ff; color: #fff; border: none; padding: 7px 14px;
+               border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 500; transition: .2s; }
         .btn:hover { background: #1e53e5; }
         .tf-btn { background: transparent; color: #787b86; border: 1px solid #2a2e39;
-                  padding: 4px 10px; border-radius: 6px; cursor: pointer; font-size: 12px; }
+                  padding: 4px 10px; border-radius: 5px; cursor: pointer; font-size: 12px; }
         .tf-btn.active { background: #2962ff; color: #fff; border-color: #2962ff; }
-        #chart { width: 100%; height: 500px; }
-        .legend { font-size: 13px; padding: 8px 20px; color: #787b86; direction: ltr; text-align: left; }
+        #chart { width: 100vw; height: calc(100vh - 85px); }
+        .legend { font-size: 13px; padding: 6px 16px; background: #131722; color: #787b86; direction: ltr; text-align: left; }
         .legend span { margin-inline-end: 14px; }
-        .up { color: #26a69a; } .down { color: #ef5350; }
+        .up { color: #089981; } .down { color: #f23645; }
     </style>
 </head>
 <body>
@@ -35,7 +35,7 @@
                 📂 انتخاب فایل CSV متاتریدر
             </button>
             <input type="file" id="csvFile" accept=".csv,.txt" style="display:none">
-            <span class="version-badge">نسخه ۳.۰ (آپدیت جدید)</span>
+            <span class="version-badge">نسخه ۴.۰ (اصلاح قیمت OHLC)</span>
         </div>
         <div style="display:flex; gap:6px;">
             <button class="tf-btn active" data-tf="60">M1</button>
@@ -45,122 +45,180 @@
             <button class="tf-btn" data-tf="86400">D1</button>
         </div>
     </div>
+    <div class="legend" id="legend">نشانگر ماوس را روی چارت ببرید تا اطلاعات کندل نمایش داده شود</div>
     <div id="chart"></div>
-    <div class="legend" id="legend"></div>
 
 <script>
-let chart, candleSeries, candles = [], timeScale = 60;
+let chart, candleSeries, rawCandles = [], currentTf = 60;
 
 document.getElementById('csvFile').addEventListener('change', function(e) {
     const file = e.target.files[0];
     if (!file) return;
-    
+
     Papa.parse(file, {
         header: false,
         skipEmptyLines: true,
-        complete: r => processCSV(r.data)
+        complete: r => parseMetaTraderData(r.data)
     });
 });
 
-function processCSV(rows) {
+function parseMetaTraderData(rows) {
     if (!rows || rows.length < 2) {
-        alert('نسخه ۳.۰: فایل شما خالی یا بسیار کوتاه است.');
+        alert('فایل خالی یا فاقد داده است.');
         return;
     }
 
-    let startIndex = 0;
-    const firstRowStr = rows[0].join(' ').toLowerCase();
-    if (firstRowStr.includes('open') || firstRowStr.includes('date') || firstRowStr.includes('time') || firstRowStr.includes('<')) {
-        startIndex = 1;
+    // بررسی اینکه آیا سطر اول شامل کلمات هدر است یا نه
+    let hasHeader = false;
+    let headerRow = rows[0].map(c => String(c).trim().toLowerCase().replace(/[^a-z0-9]/g, ''));
+    if (headerRow.some(c => c.includes('open') || c.includes('date') || c.includes('time') || c.includes('close'))) {
+        hasHeader = true;
     }
 
-    candles = [];
-    for (let i = startIndex; i < rows.length; i++) {
-        const cols = rows[i];
-        if (cols.length < 5) continue;
+    let oIdx = -1, hIdx = -1, lIdx = -1, cIdx = -1, dIdx = -1, tIdx = -1;
 
-        let dateStr = '', timeStr = '00:00';
-        let numIndices = [];
-
-        cols.forEach((val) => {
-            val = String(val).trim().replace(/["']/g, '');
-            if (!dateStr && (val.includes('.') || val.includes('-') || val.includes('/')) && val.length >= 8) {
-                dateStr = val.replace(/\./g, '-').replace(/\//g, '-');
-            } else if (dateStr && timeStr === '00:00' && val.includes(':') && val.length <= 8) {
-                timeStr = val;
-            } else {
-                let num = parseFloat(val);
-                if (!isNaN(num)) {
-                    numIndices.push(num);
-                }
-            }
+    if (hasHeader) {
+        headerRow.forEach((col, idx) => {
+            if (col === 'open' || col === 'o') oIdx = idx;
+            else if (col === 'high' || col === 'h') hIdx = idx;
+            else if (col === 'low' || col === 'l') lIdx = idx;
+            else if (col === 'close' || col === 'c') cIdx = idx;
+            else if (col.includes('date')) dIdx = idx;
+            else if (col.includes('time')) tIdx = idx;
         });
+    }
 
-        if (numIndices.length >= 4) {
-            const len = numIndices.length;
-            const close = numIndices[len - 1];
-            const low   = numIndices[len - 2];
-            const high  = numIndices[len - 3];
-            const open  = numIndices[len - 4];
-
-            let ts;
-            if (dateStr) {
-                let fullDateTime = dateStr + 'T' + (timeStr.length === 5 ? timeStr : timeStr.slice(0,5)) + ':00Z';
-                ts = Math.floor(new Date(fullDateTime).getTime() / 1000);
-            }
-            if (isNaN(ts) || !ts) {
-                ts = Math.floor(Date.now() / 1000) - (rows.length - i) * 60;
-            }
-
-            candles.push({ time: ts, open, high, low, close });
+    // اگر بر اساس نام هدر پیدا نشد، فرمت پیش‌فرض متاتریدر را اعمال کن:
+    // ساختار استاندارد متاتریدر: Date(0), Time(1), Open(2), High(3), Low(4), Close(5)
+    // یا Date+Time(0), Open(1), High(2), Low(3), Close(4)
+    const testRow = rows[hasHeader ? 1 : 0];
+    if (oIdx === -1 || hIdx === -1 || lIdx === -1 || cIdx === -1) {
+        if (testRow[1] && String(testRow[1]).includes(':')) {
+            // حالت دو ستون مجزا برای تاریخ و زمان
+            dIdx = 0; tIdx = 1;
+            oIdx = 2; hIdx = 3; lIdx = 4; cIdx = 5;
+        } else {
+            // حالت تاریخ و زمان چسبیده در ستون اول
+            dIdx = 0; tIdx = -1;
+            oIdx = 1; hIdx = 2; lIdx = 3; cIdx = 4;
         }
     }
 
-    // مرتب‌سازی و حذف زمان‌های تکراری
-    candles.sort((a, b) => a.time - b.time);
-    candles = candles.filter((c, idx, arr) => idx === 0 || c.time > arr[idx - 1].time);
+    rawCandles = [];
+    const startRow = hasHeader ? 1 : 0;
 
-    if (candles.length > 0) {
-        drawChart();
+    for (let i = startRow; i < rows.length; i++) {
+        const row = rows[i];
+        if (row.length <= Math.max(oIdx, hIdx, lIdx, cIdx)) continue;
+
+        let open = parseFloat(row[oIdx]);
+        let high = parseFloat(row[hIdx]);
+        let low  = parseFloat(row[lIdx]);
+        let close = parseFloat(row[cIdx]);
+
+        if (isNaN(open) || isNaN(high) || isNaN(low) || isNaN(close)) continue;
+
+        // پارس تاریخ و ساعت
+        let datePart = String(row[dIdx]).trim().replace(/\./g, '-').replace(/\//g, '-');
+        let timePart = (tIdx !== -1 && row[tIdx]) ? String(row[tIdx]).trim() : '00:00:00';
+        if (timePart.length === 5) timePart += ':00';
+
+        let isoString = datePart.includes('T') ? datePart : `${datePart}T${timePart}Z`;
+        let ts = Math.floor(new Date(isoString).getTime() / 1000);
+
+        // در صورت عدم تشخیص تاریخ دقیق، از گام زمانی یکنواخت استفاده می‌شود
+        if (isNaN(ts)) {
+            ts = 1600000000 + (i * 60);
+        }
+
+        // تضمین صحت روابط High و Low
+        let actualHigh = Math.max(open, high, low, close);
+        let actualLow  = Math.min(open, high, low, close);
+
+        rawCandles.push({
+            time: ts,
+            open: open,
+            high: actualHigh,
+            low: actualLow,
+            close: close
+        });
+    }
+
+    // مرتب‌سازی بر اساس زمان و حذف داده‌های تکراری
+    rawCandles.sort((a, b) => a.time - b.time);
+    rawCandles = rawCandles.filter((c, idx, arr) => idx === 0 || c.time > arr[idx - 1].time);
+
+    if (rawCandles.length > 0) {
+        initChart();
+        applyData();
     } else {
-        alert('نسخه ۳.۰: ساختار فایل خوانده نشد!\nخط اول فایل شما:\n' + JSON.stringify(rows[0]) + '\nخط دوم:\n' + JSON.stringify(rows[1]));
+        alert('نسخه ۴.۰: داده‌های OHLC معتبر در فایل یافت نشدند.');
     }
 }
 
-function drawChart() {
+function initChart() {
     if (!chart) {
-        chart = LightweightCharts.createChart(document.getElementById('chart'), {
-            layout: { background: { color: '#0e0e10' }, textColor: '#787b86' },
+        const container = document.getElementById('chart');
+        chart = LightweightCharts.createChart(container, {
+            layout: {
+                background: { color: '#131722' },
+                textColor: '#9ea2ad'
+            },
             grid: {
-                vertLines: { color: '#1a1c22' },
-                horzLines: { color: '#1a1c22' }
+                vertLines: { color: '#1e222d' },
+                horzLines: { color: '#1e222d' }
             },
             crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
-            rightPriceScale: { borderColor: '#2a2e39' },
-            timeScale: { borderColor: '#2a2e39', timeVisible: true, secondsVisible: false },
+            rightPriceScale: {
+                borderColor: '#2a2e39',
+                autoScale: true
+            },
+            timeScale: {
+                borderColor: '#2a2e39',
+                timeVisible: true,
+                secondsVisible: false
+            }
         });
 
         candleSeries = chart.addCandlestickSeries({
-            upColor: '#26a69a', downColor: '#ef5350',
-            borderUpColor: '#26a69a', borderDownColor: '#ef5350',
-            wickUpColor: '#26a69a', wickDownColor: '#ef5350',
+            upColor: '#089981',
+            downColor: '#f23645',
+            borderUpColor: '#089981',
+            borderDownColor: '#f23645',
+            wickUpColor: '#089981',
+            wickDownColor: '#f23645'
         });
 
         chart.subscribeCrosshairMove(param => {
-            const c = param.seriesData.get(candleSeries);
             const el = document.getElementById('legend');
-            if (!c) { el.innerHTML = ''; return; }
+            if (!param.time || !param.seriesData.get(candleSeries)) {
+                el.innerText = 'نشانگر ماوس را روی چارت ببرید تا اطلاعات کندل نمایش داده شود';
+                return;
+            }
+            const c = param.seriesData.get(candleSeries);
             const cls = c.close >= c.open ? 'up' : 'down';
+            const dateStr = new Date(c.time * 1000).toISOString().slice(0, 16).replace('T', ' ');
             el.innerHTML = `
-                <span>${new Date(c.time * 1000).toISOString().slice(0,16).replace('T',' ')}</span>
-                <span>O <b class="${cls}">${c.open}</b></span>
-                <span>H <b class="${cls}">${c.high}</b></span>
-                <span>L <b class="${cls}">${c.low}</b></span>
-                <span>C <b class="${cls}">${c.close}</b></span>`;
+                <span>${dateStr}</span>
+                <span>O: <b class="${cls}">${c.open}</b></span>
+                <span>H: <b class="${cls}">${c.high}</b></span>
+                <span>L: <b class="${cls}">${c.low}</b></span>
+                <span>C: <b class="${cls}">${c.close}</b></span>`;
+        });
+
+        window.addEventListener('resize', () => {
+            chart.applyOptions({
+                width: window.innerWidth,
+                height: window.innerHeight - 85
+            });
         });
     }
+}
 
-    candleSeries.setData(candles);
+function applyData() {
+    if (!candleSeries) return;
+    const data = aggregate(rawCandles, currentTf);
+    candleSeries.setData(data);
     chart.timeScale().fitContent();
 }
 
@@ -168,11 +226,8 @@ document.querySelectorAll('.tf-btn').forEach(btn => {
     btn.addEventListener('click', () => {
         document.querySelectorAll('.tf-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
-        timeScale = +btn.dataset.tf;
-        if (candles.length) {
-            candleSeries.setData(aggregate(candles, timeScale));
-            chart.timeScale().fitContent();
-        }
+        currentTf = +btn.dataset.tf;
+        applyData();
     });
 });
 
@@ -181,8 +236,9 @@ function aggregate(data, sec) {
     const map = new Map();
     data.forEach(c => {
         const bucket = Math.floor(c.time / sec) * sec;
-        if (!map.has(bucket)) map.set(bucket, { ...c, time: bucket });
-        else {
+        if (!map.has(bucket)) {
+            map.set(bucket, { time: bucket, open: c.open, high: c.high, low: c.low, close: c.close });
+        } else {
             const b = map.get(bucket);
             b.high = Math.max(b.high, c.high);
             b.low  = Math.min(b.low, c.low);
