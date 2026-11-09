@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>نمایشگر CSV در نوشن</title>
+    <!-- Tailwind CSS برای استایل‌دهی مدرن -->
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <!-- Chart.js برای رسم نمودار -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- PapaParse برای خواندن دقیق فایل CSV -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;700&display=swap');
+        body { font-family: 'Vazirmatn', sans-serif; }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800 min-h-screen p-4 md:p-8">
+
+    <div class="max-w-4xl mx-auto space-y-6">
+        <!-- هدر و بخش آپلود -->
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col md:flex-row items-center justify-between gap-4">
+            <div>
+                <h1 class="text-xl font-bold text-gray-900">تحلیلگر و نمایشگر فایل CSV</h1>
+                <p class="text-sm text-gray-500 mt-1">فایل CSV خود را انتخاب کنید تا جدول و نمودار آن رسم شود.</p>
+            </div>
+            
+            <label class="cursor-pointer bg-black hover:bg-gray-800 text-white text-sm font-medium px-5 py-2.5 rounded-xl transition-all shadow-sm flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+                انتخاب فایل CSV
+                <input type="file" id="csvFile" accept=".csv" class="hidden">
+            </label>
+        </div>
+
+        <!-- بخش نمودار -->
+        <div id="chartContainer" class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hidden">
+            <h2 class="text-base font-semibold text-gray-800 mb-4">نمودار داده‌ها</h2>
+            <div class="relative h-72 w-full">
+                <canvas id="myChart"></canvas>
+            </div>
+        </div>
+
+        <!-- بخش جدول داده‌ها -->
+        <div id="tableContainer" class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hidden">
+            <div class="p-6 border-b border-gray-100">
+                <h2 class="text-base font-semibold text-gray-800">پیش‌نمایش جدول</h2>
+            </div>
+            <div class="overflow-x-auto max-h-96">
+                <table id="dataTable" class="w-full text-right border-collapse">
+                    <thead id="tableHead" class="bg-gray-50 text-xs font-semibold text-gray-600 sticky top-0"></thead>
+                    <tbody id="tableBody" class="divide-y divide-gray-100 text-sm text-gray-700"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let myChartInstance = null;
+
+        document.getElementById('csvFile').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            Papa.parse(file, {
+                header: true,
+                skipEmptyLines: true,
+                complete: function(results) {
+                    const data = results.data;
+                    if (data.length === 0) {
+                        alert('فایل خالی است یا فرمت آن نامعتبر است.');
+                        return;
+                    }
+
+                    renderTable(data);
+                    renderChart(data);
+                },
+                error: function(err) {
+                    alert('خطا در خواندن فایل: ' + err.message);
+                }
+            });
+        });
+
+        function renderTable(data) {
+            const keys = Object.keys(data[0]);
+            const thead = document.getElementById('tableHead');
+            const tbody = document.getElementById('tableBody');
+            
+            thead.innerHTML = '';
+            tbody.innerHTML = '';
+
+            // ایجاد هدر جدول
+            let headRow = '<tr>';
+            keys.forEach(key => {
+                headRow += `<th class="p-3">${key}</th>`;
+            });
+            headRow += '</tr>';
+            thead.innerHTML = headRow;
+
+            // ایجاد ردیف‌های جدول (حداکثر ۱۰۰ سطر برای سرعت بالاتر)
+            data.slice(0, 100).forEach(row => {
+                let tr = '<tr class="hover:bg-gray-50 transition-colors">';
+                keys.forEach(key => {
+                    tr += `<td class="p-3">${row[key] !== undefined ? row[key] : ''}</td>`;
+                });
+                tr += '</tr>';
+                tbody.innerHTML += tr;
+            });
+
+            document.getElementById('tableContainer').classList.remove('hidden');
+        }
+
+        function renderChart(data) {
+            const keys = Object.keys(data[0]);
+            // ستون اول به عنوان برچسب (محور X) و ستون دوم به عنوان مقدار عددی (محور Y) در نظر گرفته می‌شود
+            const labelKey = keys[0];
+            const valueKey = keys[1] || keys[0];
+
+            const labels = data.map(row => row[labelKey]);
+            const values = data.map(row => parseFloat(row[valueKey]) || 0);
+
+            const ctx = document.getElementById('myChart').getContext('2d');
+            
+            if (myChartInstance) {
+                myChartInstance.destroy();
+            }
+
+            myChartInstance = new Chart(ctx, {
+                type: 'bar', // نوع نمودار: می‌توانید به 'line' هم تغییر دهید
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: valueKey,
+                        data: values,
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        x: { grid: { display: false } },
+                        y: { grid: { color: '#f3f4f6' } }
+                    }
+                }
+            });
+
+            document.getElementById('chartContainer').classList.remove('hidden');
+        }
+    </script>
+</body>
+</html>
