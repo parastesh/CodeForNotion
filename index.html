@@ -20,7 +20,6 @@
             background-color: #121212;
             color: #e0e0e0;
         }
-        /* سفارشی‌سازی اسکرول‌بار */
         ::-webkit-scrollbar {
             width: 8px;
             height: 8px;
@@ -46,7 +45,6 @@
                 <i class="fa-solid fa-chart-candlestick text-blue-500"></i> نمودار متاتریدر
             </h1>
             
-            <!-- آپلود CSV جدید کندل‌ها -->
             <label class="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-1.5 rounded cursor-pointer transition flex items-center gap-1.5 shadow">
                 <i class="fa-solid fa-upload"></i> آپلود CSV کندل
                 <input type="file" id="csvFileInput" accept=".csv" class="hidden">
@@ -74,10 +72,10 @@
 
             <!-- دکمه‌های عملیاتی روی خط انتخاب شده -->
             <div class="flex items-center gap-1">
-                <button onclick="duplicateSelectedLine()" class="bg-gray-700 hover:bg-gray-600 text-white px-2.5 py-1.5 rounded transition flex items-center gap-1" title="کپی خط انتخاب شده">
+                <button onclick="duplicateSelectedLine()" class="bg-gray-700 hover:bg-gray-600 text-white px-2.5 py-1.5 rounded transition flex items-center gap-1" title="کپی خط انتخاب شده (Ctrl+D)">
                     <i class="fa-solid fa-clone"></i> کپی خط
                 </button>
-                <button onclick="deleteSelectedLine()" class="bg-red-900/60 hover:bg-red-800 text-red-200 px-2.5 py-1.5 rounded transition flex items-center gap-1" title="حذف خط انتخاب شده">
+                <button onclick="deleteSelectedLine()" class="bg-red-900/60 hover:bg-red-800 text-red-200 px-2.5 py-1.5 rounded transition flex items-center gap-1" title="حذف خط انتخاب شده (Delete)">
                     <i class="fa-solid fa-trash-can"></i> حذف خط
                 </button>
             </div>
@@ -112,22 +110,20 @@
 
     <!-- ناحیه اصلی نمودار و بوم رسم خطوط -->
     <main id="chartContainer" class="flex-1 relative w-full overflow-hidden bg-[#121212]">
-        <!-- بوم رسم خطوط (روی چارت قرار می‌گیرد) -->
-        <canvas id="drawingCanvas" class="absolute inset-0 z-10 pointer-events-none w-full h-full"></canvas>
+        <canvas id="drawingCanvas" class="absolute inset-0 z-10 w-full h-full"></canvas>
     </main>
 
     <!-- نوار وضعیت پایین -->
     <footer class="bg-[#1e1e1e] border-t border-[#333] px-4 py-1 text-xs text-gray-400 flex justify-between items-center shrink-0">
-        <div id="statusText">لطفاً فایل CSV کندل‌ها را آپلود کنید یا پروژه قبلی را بارگذاری نمایید.</div>
+        <div id="statusText">آماده به کار. لطفاً فایل CSV خود را بارگذاری کنید.</div>
         <div>توسعهیافته برای متاتریدر | Lightweight Charts</div>
     </footer>
 
-    <!-- منطق جاوااسکریپت -->
     <script>
         let chart, candlestickSeries;
         let candleData = [];
-        let drawings = []; // لیست خطوط ترسیم شده
-        let currentTool = 'select'; // 'select' یا 'line'
+        let drawings = []; 
+        let currentTool = 'select'; 
         let selectedLineIndex = null;
         let isDrawing = false;
         let startPoint = null;
@@ -135,7 +131,6 @@
         let draggingLineIndex = null;
         let dragOffset = { x: 0, y: 0 };
 
-        // راه‌اندازی اولیه چارت
         function initChart() {
             const container = document.getElementById('chartContainer');
             
@@ -154,10 +149,7 @@
                 rightPriceScale: {
                     borderColor: '#333',
                     visible: true,
-                    scaleMargins: {
-                        top: 0.1,
-                        bottom: 0.2,
-                    },
+                    scaleMargins: { top: 0.1, bottom: 0.2 },
                 },
                 timeScale: {
                     borderColor: '#333',
@@ -174,7 +166,6 @@
                 wickDownColor: '#ef5350',
             });
 
-            // تنظیم ابعاد بوم و رخدادها
             resizeCanvas();
             window.addEventListener('resize', () => {
                 resizeCanvas();
@@ -186,7 +177,6 @@
             });
 
             setupCanvasEvents();
-            loadDefaultDataOrDemo();
         }
 
         function resizeCanvas() {
@@ -197,13 +187,7 @@
             redrawCanvas();
         }
 
-        // بارگذاری پیش‌فرض یا نمونه
-        function loadDefaultDataOrDemo() {
-            // داده نمونه اولیه خالی یا تستی در صورت نیاز
-            document.getElementById('statusText').innerText = 'آماده به کار. لطفاً فایل CSV خود را بارگذاری کنید.';
-        }
-
-        // خواندن فایل CSV کندل‌ها
+        // خواندن CSV کندل‌ها
         document.getElementById('csvFileInput').addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (!file) return;
@@ -226,19 +210,14 @@
                 let row = rows[i];
                 if (row.length < 5) continue;
 
-                // تشخیص ستون‌ها (پشتیبانی از ساختار متاتریدر)
                 let dateStr = row[0]?.trim();
-                let timeStr = row[1]?.trim() || "00:00:00";
-                
                 let o, h, l, c;
                 if (!isNaN(parseFloat(row[1])) && !isNaN(parseFloat(row[2]))) {
-                    // ستون 0 تاریخ، 1 تا 4 قیمت‌ها
                     o = parseFloat(row[1]);
                     h = parseFloat(row[2]);
                     l = parseFloat(row[3]);
                     c = parseFloat(row[4]);
                 } else if (!isNaN(parseFloat(row[2])) && !isNaN(parseFloat(row[3]))) {
-                    // ستون 0 تاریخ، 1 زمان، 2 تا 5 قیمت‌ها
                     dateStr = `${row[0]} ${row[1]}`;
                     o = parseFloat(row[2]);
                     h = parseFloat(row[3]);
@@ -250,7 +229,6 @@
 
                 let timestamp;
                 if (dateStr.includes('.')) {
-                    // فرمت متاتریدر مثل 2023.10.25
                     let parts = dateStr.split(' ');
                     let datePart = parts[0].replace(/\./g, '-');
                     let timePart = parts[1] || '00:00:00';
@@ -260,29 +238,21 @@
                 }
 
                 if (!isNaN(timestamp) && !isNaN(o) && !isNaN(h) && !isNaN(l) && !isNaN(c)) {
-                    parsed.push({
-                        time: timestamp,
-                        open: o,
-                        high: h,
-                        low: l,
-                        close: c
-                    });
+                    parsed.push({ time: timestamp, open: o, high: h, low: l, close: c });
                 }
             }
 
             if (parsed.length > 0) {
-                // مرتب‌سازی بر اساس زمان
                 parsed.sort((a, b) => a.time - b.time);
                 candleData = parsed;
                 candlestickSeries.setData(candleData);
                 chart.timeScale().fitContent();
                 document.getElementById('statusText').innerText = `تعداد ${candleData.length} کندل با موفقیت بارگذاری شد.`;
             } else {
-                alert('فرمت ستون‌های OHLC در فایل یافت نشد. لطفاً خروجی Bars متاتریدر را بررسی کنید.');
+                alert('فرمت ستون‌های OHLC در فایل یافت نشد.');
             }
         }
 
-        // مدیریت ابزار رسم
         function setDrawingTool(tool) {
             currentTool = tool;
             selectedLineIndex = null;
@@ -290,12 +260,9 @@
             document.getElementById('toolSelect').className = tool === 'select' ? 'px-2 py-1 rounded bg-blue-600 text-white transition' : 'px-2 py-1 rounded hover:bg-[#444] text-gray-300 transition';
             document.getElementById('toolLine').className = tool === 'line' ? 'px-2 py-1 rounded bg-blue-600 text-white transition' : 'px-2 py-1 rounded hover:bg-[#444] text-gray-300 transition';
             
-            const canvas = document.getElementById('drawingCanvas');
-            canvas.style.pointerEvents = tool === 'line' ? 'auto' : 'auto';
             redrawCanvas();
         }
 
-        // رویدادهای ماوس روی بوم رسم
         function setupCanvasEvents() {
             const canvas = document.getElementById('drawingCanvas');
 
@@ -309,13 +276,12 @@
                     startPoint = { x, y };
                     currentMousePoint = { x, y };
                 } else if (currentTool === 'select') {
-                    // بررسی کلیک روی خطوط برای انتخاب یا جابجایی
                     let clickedIndex = findLineAt(x, y);
                     if (clickedIndex !== null) {
                         selectedLineIndex = clickedIndex;
                         draggingLineIndex = clickedIndex;
-                        const line = drawings[clickedIndex];
-                        const p1 = coordToPixel(line.time1, line.price1);
+                        let line = drawings[clickedIndex];
+                        let p1 = coordToPixel(line.time1, line.price1);
                         dragOffset = { x: x - p1.x, y: y - p1.y };
                     } else {
                         selectedLineIndex = null;
@@ -334,7 +300,6 @@
                     redrawCanvas();
                     drawTempLine(startPoint, currentMousePoint);
                 } else if (currentTool === 'select' && draggingLineIndex !== null) {
-                    // جابجایی کل خط
                     let line = drawings[draggingLineIndex];
                     let p1Old = coordToPixel(line.time1, line.price1);
                     let p2Old = coordToPixel(line.time2, line.price2);
@@ -348,26 +313,24 @@
                     let c1 = pixelToCoord(newP1.x, newP1.y);
                     let c2 = pixelToCoord(newP2.x, newP2.y);
 
-                    line.time1 = c1.time;
-                    line.price1 = c1.price;
-                    line.time2 = c2.time;
-                    line.price2 = c2.price;
+                    if (c1.time && c2.time) {
+                        line.time1 = c1.time;
+                        line.price1 = c1.price;
+                        line.time2 = c2.time;
+                        line.price2 = c2.price;
+                    }
 
                     dragOffset = { x: x - newP1.x, y: y - newP1.y };
                     redrawCanvas();
                 }
             });
 
-            canvas.addEventListener('mouseup', (e) => {
+            canvas.addEventListener('mouseup', () => {
                 if (isDrawing && currentTool === 'line' && startPoint && currentMousePoint) {
-                    const rect = canvas.getBoundingClientRect();
-                    const x = e.clientX - rect.left;
-                    const y = e.clientY - rect.top;
-
                     let c1 = pixelToCoord(startPoint.x, startPoint.y);
-                    let c2 = pixelToCoord(x, y);
+                    let c2 = pixelToCoord(currentMousePoint.x, currentMousePoint.y);
 
-                    if (c1 && c2) {
+                    if (c1.time && c2.time) {
                         drawings.push({
                             time1: c1.time,
                             price1: c1.price,
@@ -415,24 +378,18 @@
                 ctx.strokeStyle = line.color;
                 ctx.lineWidth = (index === selectedLineIndex) ? 3 : 2;
 
-                if (line.style === 'dashed') {
-                    ctx.setLineDash([6, 6]);
-                } else if (line.style === 'dotted') {
-                    ctx.setLineDash([2, 4]);
-                } else {
-                    ctx.setLineDash([]);
-                }
+                if (line.style === 'dashed') ctx.setLineDash([6, 6]);
+                else if (line.style === 'dotted') ctx.setLineDash([2, 4]);
+                else ctx.setLineDash([]);
 
                 ctx.moveTo(p1.x, p1.y);
                 ctx.lineTo(p2.x, p2.y);
                 ctx.stroke();
 
-                // رسم لنگرهای انتخاب
                 if (index === selectedLineIndex) {
                     ctx.fillStyle = '#ffffff';
                     ctx.strokeStyle = line.color;
                     ctx.lineWidth = 2;
-                    
                     [p1, p2].forEach(p => {
                         ctx.beginPath();
                         ctx.arc(p.x, p.y, 5, 0, Math.PI * 2);
@@ -467,8 +424,6 @@
                 let line = drawings[i];
                 let p1 = coordToPixel(line.time1, line.price1);
                 let p2 = coordToPixel(line.time2, line.price2);
-
-                // فاصله نقطه تا پاره‌خط
                 let dist = distToSegment({x, y}, p1, p2);
                 if (dist < 8) return i;
             }
@@ -483,7 +438,7 @@
             return Math.hypot(p.x - (p1.x + t * (p2.x - p1.x)), p.y - (p1.y + t * (p2.y - p1.y)));
         }
 
-        // کپی خط انتخاب شده با فاصله (آفست واضح)
+        // نسخه اصلاح‌شده و دقیق کپی خط با استفاده از آفست پیکسلی مستقیم
         function duplicateSelectedLine() {
             if (selectedLineIndex === null || !drawings[selectedLineIndex]) {
                 alert('لطفاً ابتدا یک خط را روی نمودار انتخاب کنید.');
@@ -491,22 +446,20 @@
             }
             let original = drawings[selectedLineIndex];
             
-            // محاسبه آفست بر اساس پیکسل برای جابجایی واضح خط جدید
+            // تبدیل مختصات خط اصلی به پیکسل صفحه
             let p1 = coordToPixel(original.time1, original.price1);
             let p2 = coordToPixel(original.time2, original.price2);
-            
-            let newP1 = coordToPixel(original.time1, original.price1);
-            let newP2 = coordToPixel(original.time2, original.price2);
-            
-            // جابجایی 30 پیکسل به سمت پایین و راست
-            let c1 = pixelToCoord(p1.x + 30, p1.y + 30);
-            let c2 = pixelToCoord(p2.x + 30, p2.y + 30);
+
+            // ایجاد آفست پیکسلی مشخص (مثلا 35 پیکسل پایین‌تر و راست‌تر)
+            let offsetPx = 35;
+            let newP1 = pixelToCoord(p1.x + offsetPx, p1.y + offsetPx);
+            let newP2 = pixelToCoord(p2.x + offsetPx, p2.y + offsetPx);
 
             let duplicated = {
-                time1: c1.time || original.time1,
-                price1: c1.price ? original.price1 - (original.price1 * 0.005) : original.price1,
-                time2: c2.time || original.time2,
-                price2: c2.price ? original.price2 - (original.price2 * 0.005) : original.price2,
+                time1: newP1.time || original.time1,
+                price1: newP1.price || original.price1,
+                time2: newP2.time || original.time2,
+                price2: newP2.price || original.price2,
                 color: original.color,
                 style: original.style
             };
@@ -514,6 +467,7 @@
             drawings.push(duplicated);
             selectedLineIndex = drawings.length - 1;
             redrawCanvas();
+            document.getElementById('statusText').innerText = 'کپی خط با موفقیت ایجاد شد.';
         }
 
         function deleteSelectedLine() {
@@ -545,17 +499,13 @@
             }
         }
 
-        // ذخیره و بارگذاری پروژه
         function saveProject() {
-            const projectData = {
-                candles: candleData,
-                drawings: drawings
-            };
+            const projectData = { candles: candleData, drawings: drawings };
             const blob = new Blob([JSON.stringify(projectData, null, 2)], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = 'trading_project.csv';
+            a.download = 'trading_project.json';
             a.click();
             URL.revokeObjectURL(url);
         }
@@ -585,7 +535,6 @@
             reader.readAsText(file);
         });
 
-        // اسکرین‌شات
         function takeScreenshot() {
             html2canvas(document.getElementById('chartContainer')).then(canvas => {
                 const link = document.createElement('a');
@@ -595,7 +544,18 @@
             });
         }
 
-        // شروع اولیه
+        // میانبرهای صفحه کلید (حذف با Delete و کپی با Ctrl+D)
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'Delete' || e.key === 'Backspace') {
+                if (selectedLineIndex !== null) {
+                    deleteSelectedLine();
+                }
+            } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'd') {
+                e.preventDefault();
+                duplicateSelectedLine();
+            }
+        });
+
         initChart();
     </script>
 </body>
