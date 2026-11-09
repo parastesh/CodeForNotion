@@ -3,2303 +3,600 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <title>چارت حرفه‌ای متاتریدر</title>
-
-    <script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
+    <title>نمودار کندل استیک متاتریدر</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <!-- PapaParse برای خواندن CSV -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
-
+    <!-- Lightweight Charts -->
+    <script src="https://unpkg.com/lightweight-charts@4.1.1/dist/lightweight-charts.standalone.production.js"></script>
+    <!-- FontAwesome برای آیکون‌ها -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- html2canvas برای گرفتن اسکرین‌شات -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;700&display=swap');
-
-        * {
-            box-sizing: border-box;
-            font-family: Vazirmatn, sans-serif;
-        }
-
-        html,
         body {
-            width: 100%;
-            height: 100%;
-            margin: 0;
-            overflow: hidden;
-            background: #131722;
-            color: #d1d4dc;
+            font-family: Tahoma, sans-serif;
+            background-color: #121212;
+            color: #e0e0e0;
         }
-
-        .header {
-            min-height: 56px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            flex-wrap: wrap;
-            gap: 7px;
-            padding: 8px 12px;
-            background: #1e222d;
-            border-bottom: 1px solid #2a2e39;
+        /* سفارشی‌سازی اسکرول‌بار */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
         }
-
-        .group {
-            display: flex;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 6px;
+        ::-webkit-scrollbar-track {
+            background: #1e1e1e;
         }
-
-        .btn {
-            border: 0;
-            border-radius: 6px;
-            padding: 6px 11px;
-            background: #2962ff;
-            color: #fff;
-            cursor: pointer;
-            font-size: 11px;
-            font-weight: 500;
-            transition: background .15s, opacity .15s;
-        }
-
-        .btn:hover {
-            background: #1e53e5;
-        }
-
-        .btn.active {
-            background: #089981;
-        }
-
-        .btn-success {
-            background: #089981;
-        }
-
-        .btn-success:hover {
-            background: #067a67;
-        }
-
-        .btn-warning {
-            background: #f59e0b;
-            color: #161616;
-        }
-
-        .btn-warning:hover {
-            background: #d97706;
-        }
-
-        .btn-danger {
-            background: #e53935;
-        }
-
-        .btn-danger:hover {
-            background: #c62828;
-        }
-
-        .btn-dark {
-            background: #363c4e;
-        }
-
-        .btn-dark:hover {
-            background: #4b5268;
-        }
-
-        .btn:disabled {
-            cursor: not-allowed;
-            opacity: .42;
-        }
-
-        .tf-btn {
-            padding: 4px 8px;
-            border: 1px solid #363c4e;
-            border-radius: 5px;
-            background: transparent;
-            color: #8b8e99;
-            cursor: pointer;
-            font-size: 11px;
-        }
-
-        .tf-btn.active {
-            border-color: #2962ff;
-            background: #2962ff;
-            color: #fff;
-        }
-
-        .version-badge {
-            padding: 4px 8px;
+        ::-webkit-scrollbar-thumb {
+            background: #333;
             border-radius: 4px;
-            background: #8b5cf6;
-            color: #fff;
-            font-size: 10px;
-            font-weight: 700;
         }
-
-        select,
-        input[type="color"] {
-            height: 29px;
-            border: 1px solid #363c4e;
-            border-radius: 5px;
-            background: #2a2e39;
-            color: #fff;
-            font-size: 11px;
-        }
-
-        input[type="color"] {
-            width: 35px;
-            padding: 2px;
-            cursor: pointer;
-        }
-
-        .legend {
-            height: 25px;
-            padding: 4px 12px;
-            direction: ltr;
-            text-align: left;
-            background: #131722;
-            color: #787b86;
-            font-size: 12px;
-            white-space: nowrap;
-            overflow: hidden;
-        }
-
-        .legend span {
-            margin-right: 12px;
-        }
-
-        .up {
-            color: #089981;
-        }
-
-        .down {
-            color: #f23645;
-        }
-
-        #status {
-            color: #9ea2ad;
-        }
-
-        #chart-container {
-            position: relative;
-            width: 100vw;
-            height: calc(100vh - 81px);
-            direction: ltr;
-        }
-
-        #chart {
-            position: absolute;
-            inset: 0;
-            z-index: 1;
-        }
-
-        #drawingCanvas {
-            position: absolute;
-            inset: 0;
-            z-index: 10;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            touch-action: none;
-        }
-
-        #drawingCanvas.interactive {
-            pointer-events: auto;
-            cursor: default;
-        }
-
-        #drawingCanvas.drawing {
-            cursor: crosshair;
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
         }
     </style>
 </head>
+<body class="h-screen flex flex-col overflow-hidden">
 
-<body>
+    <!-- نوار ابزار بالا -->
+    <header class="bg-[#1e1e1e] border-b border-[#333] px-4 py-2 flex flex-wrap items-center justify-between gap-3 shadow-md shrink-0">
+        <div class="flex items-center gap-3">
+            <h1 class="text-base font-bold text-gray-200 flex items-center gap-2">
+                <i class="fa-solid fa-chart-candlestick text-blue-500"></i> نمودار متاتریدر
+            </h1>
+            
+            <!-- آپلود CSV جدید کندل‌ها -->
+            <label class="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-1.5 rounded cursor-pointer transition flex items-center gap-1.5 shadow">
+                <i class="fa-solid fa-upload"></i> آپلود CSV کندل
+                <input type="file" id="csvFileInput" accept=".csv" class="hidden">
+            </label>
+        </div>
 
-<div class="header">
+        <!-- ابزارهای ترسیم و مدیریت خطوط -->
+        <div class="flex items-center flex-wrap gap-2 text-xs">
+            <div class="flex items-center bg-[#2a2a2a] px-2 py-1 rounded border border-[#444] gap-2">
+                <span class="text-gray-400">ابزار:</span>
+                <button id="toolSelect" onclick="setDrawingTool('select')" class="px-2 py-1 rounded bg-blue-600 text-white transition"><i class="fa-solid fa-arrow-pointer"></i> انتخاب</button>
+                <button id="toolLine" onclick="setDrawingTool('line')" class="px-2 py-1 rounded hover:bg-[#444] text-gray-300 transition"><i class="fa-solid fa-slash"></i> خط</button>
+            </div>
 
-    <div class="group">
-        <button class="btn" id="openCsvButton">📂 باز کردن CSV</button>
-        <input type="file" id="csvFile" accept=".csv,.txt" hidden>
+            <!-- تنظیمات خط -->
+            <div class="flex items-center bg-[#2a2a2a] px-2 py-1 rounded border border-[#444] gap-2">
+                <input type="color" id="lineColor" value="#2196F3" class="w-6 h-6 bg-transparent border-0 cursor-pointer" title="رنگ خط">
+                
+                <select id="lineStyle" class="bg-[#1e1e1e] text-gray-200 border border-[#444] rounded px-1.5 py-1 text-xs">
+                    <option value="solid">پیوسته</option>
+                    <option value="dashed">خط‌چین</option>
+                    <option value="dotted">نقطه‌چین</option>
+                </select>
+            </div>
 
-        <button class="btn btn-warning" id="updateCsvButton">
-            🔄 آپدیت کندل‌ها
-        </button>
-        <input type="file" id="updateFile" accept=".csv,.txt" hidden>
+            <!-- دکمه‌های عملیاتی روی خط انتخاب شده -->
+            <div class="flex items-center gap-1">
+                <button onclick="duplicateSelectedLine()" class="bg-gray-700 hover:bg-gray-600 text-white px-2.5 py-1.5 rounded transition flex items-center gap-1" title="کپی خط انتخاب شده">
+                    <i class="fa-solid fa-clone"></i> کپی خط
+                </button>
+                <button onclick="deleteSelectedLine()" class="bg-red-900/60 hover:bg-red-800 text-red-200 px-2.5 py-1.5 rounded transition flex items-center gap-1" title="حذف خط انتخاب شده">
+                    <i class="fa-solid fa-trash-can"></i> حذف خط
+                </button>
+            </div>
 
-        <span class="version-badge">نسخه ۵.۲</span>
-    </div>
+            <!-- پاکسازی‌ها -->
+            <div class="flex items-center gap-1 border-r border-[#444] pr-2">
+                <button onclick="clearDrawings()" class="bg-amber-900/60 hover:bg-amber-800 text-amber-200 px-2.5 py-1.5 rounded transition flex items-center gap-1" title="پاک کردن تمام خطوط ترسیمی">
+                    <i class="fa-solid fa-eraser"></i> پاک کردن خطوط
+                </button>
+                <button onclick="clearEntirePage()" class="bg-red-700 hover:bg-red-600 text-white px-2.5 py-1.5 rounded transition flex items-center gap-1 font-bold" title="پاک کردن کل صفحه و تنظیمات">
+                    <i class="fa-solid fa-rotate-left"></i> پاکسازی کل صفحه
+                </button>
+            </div>
+        </div>
 
-    <div class="group">
-        <button class="btn" id="toolLineBtn">✏️ ترسیم خط</button>
+        <!-- ذخیره و خروجی -->
+        <div class="flex items-center gap-2 text-xs">
+            <button onclick="saveProject()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded transition flex items-center gap-1 shadow">
+                <i class="fa-solid fa-file-arrow-down"></i> ذخیره پروژه (CSV)
+            </button>
+            
+            <label class="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded cursor-pointer transition flex items-center gap-1 shadow">
+                <i class="fa-solid fa-file-arrow-up"></i> بارگذاری پروژه
+                <input type="file" id="projectFileInput" accept=".csv" class="hidden">
+            </label>
 
-        <select id="lineStyleSelect" title="نوع خط">
-            <option value="solid">خط ساده</option>
-            <option value="dashed">خط‌چین</option>
-            <option value="dotted">نقطه‌چین</option>
-        </select>
+            <button onclick="takeScreenshot()" class="bg-gray-700 hover:bg-gray-600 text-white px-3 py-1.5 rounded transition flex items-center gap-1 shadow" title="گرفتن اسکرین‌شات از نمودار">
+                <i class="fa-solid fa-camera"></i> اسکرین‌شات
+            </button>
+        </div>
+    </header>
 
-        <input
-            type="color"
-            id="lineColorPicker"
-            value="#2962ff"
-            title="رنگ خط"
-        >
+    <!-- ناحیه اصلی نمودار و بوم رسم خطوط -->
+    <main id="chartContainer" class="flex-1 relative w-full overflow-hidden bg-[#121212]">
+        <!-- بوم رسم خطوط (روی چارت قرار می‌گیرد) -->
+        <canvas id="drawingCanvas" class="absolute inset-0 z-10 pointer-events-none w-full h-full"></canvas>
+    </main>
 
-        <button class="btn btn-dark" id="duplicateLineButton" disabled>
-            📑 کپی خط
-        </button>
+    <!-- نوار وضعیت پایین -->
+    <footer class="bg-[#1e1e1e] border-t border-[#333] px-4 py-1 text-xs text-gray-400 flex justify-between items-center shrink-0">
+        <div id="statusText">لطفاً فایل CSV کندل‌ها را آپلود کنید یا پروژه قبلی را بارگذاری نمایید.</div>
+        <div>توسعهیافته برای متاتریدر | Lightweight Charts</div>
+    </footer>
 
-        <button class="btn btn-danger" id="deleteLineButton" disabled>
-            🗑 حذف خط
-        </button>
+    <!-- منطق جاوااسکریپت -->
+    <script>
+        let chart, candlestickSeries;
+        let candleData = [];
+        let drawings = []; // لیست خطوط ترسیم شده
+        let currentTool = 'select'; // 'select' یا 'line'
+        let selectedLineIndex = null;
+        let isDrawing = false;
+        let startPoint = null;
+        let currentMousePoint = null;
+        let draggingLineIndex = null;
+        let dragOffset = { x: 0, y: 0 };
 
-        <button class="btn btn-danger" id="clearLinesButton">
-            پاک‌کردن خطوط
-        </button>
-    </div>
-
-    <div class="group">
-        <button class="btn btn-success" id="saveProjectButton">
-            💾 ذخیره
-        </button>
-
-        <button class="btn" id="loadProjectButton">
-            📂 بازیابی
-        </button>
-        <input type="file" id="loadProjectFile" accept=".json,.csv" hidden>
-
-        <button class="btn" id="screenshotButton">
-            📸 ذخیره تصویر
-        </button>
-
-        <button class="btn btn-danger" id="clearPageButton">
-            ⚠ پاک‌کردن کل صفحه
-        </button>
-    </div>
-
-    <div class="group">
-        <button class="tf-btn active" data-tf="60">M1</button>
-        <button class="tf-btn" data-tf="300">M5</button>
-        <button class="tf-btn" data-tf="900">M15</button>
-        <button class="tf-btn" data-tf="3600">H1</button>
-        <button class="tf-btn" data-tf="86400">D1</button>
-    </div>
-
-</div>
-
-<div class="legend" id="legend">
-    <span id="status">برای شروع، فایل CSV را باز کنید.</span>
-</div>
-
-<div id="chart-container">
-    <div id="chart"></div>
-    <canvas id="drawingCanvas"></canvas>
-</div>
-
-<script>
-    let chart = null;
-    let candleSeries = null;
-
-    let rawCandles = [];
-    let currentTf = 60;
-
-    let lines = [];
-    let selectedLineIndex = null;
-
-    let drawingMode = false;
-    let pointerDown = false;
-    let currentDrawingIndex = null;
-    let dragMode = null;
-    let lastDragPoint = null;
-
-    let visibleCandles = [];
-
-    const chartContainer =
-        document.getElementById('chart-container');
-
-    const canvas =
-        document.getElementById('drawingCanvas');
-
-    const ctx =
-        canvas.getContext('2d');
-
-    const statusElement =
-        document.getElementById('status');
-
-    const toolLineBtn =
-        document.getElementById('toolLineBtn');
-
-    const duplicateLineButton =
-        document.getElementById('duplicateLineButton');
-
-    const deleteLineButton =
-        document.getElementById('deleteLineButton');
-
-    const clearLinesButton =
-        document.getElementById('clearLinesButton');
-
-    const clearPageButton =
-        document.getElementById('clearPageButton');
-
-    const styleSelect =
-        document.getElementById('lineStyleSelect');
-
-    const colorPicker =
-        document.getElementById('lineColorPicker');
-
-
-    function setStatus(message) {
-        statusElement.textContent = message;
-    }
-
-
-    function normalizeTime(time) {
-        if (typeof time === 'number') {
-            return time;
-        }
-
-        if (
-            time &&
-            typeof time === 'object' &&
-            typeof time.year === 'number'
-        ) {
-            return Math.floor(
-                Date.UTC(
-                    time.year,
-                    time.month - 1,
-                    time.day
-                ) / 1000
-            );
-        }
-
-        return null;
-    }
-
-
-    function initChart() {
-        if (chart) {
-            return;
-        }
-
-        chart = LightweightCharts.createChart(
-            document.getElementById('chart'),
-            {
-                width: chartContainer.clientWidth,
-                height: chartContainer.clientHeight,
-
+        // راه‌اندازی اولیه چارت
+        function initChart() {
+            const container = document.getElementById('chartContainer');
+            
+            chart = LightweightCharts.createChart(container, {
                 layout: {
-                    background: {
-                        type: 'solid',
-                        color: '#131722'
-                    },
-                    textColor: '#d1d4dc',
-                    fontSize: 12
+                    background: { type: 'solid', color: '#121212' },
+                    textColor: '#d1d5db',
                 },
-
                 grid: {
-                    vertLines: {
-                        color: '#1e222d'
-                    },
-                    horzLines: {
-                        color: '#1e222d'
-                    }
+                    vertLines: { color: '#1e1e1e' },
+                    horzLines: { color: '#1e1e1e' },
                 },
-
                 crosshair: {
-                    mode: LightweightCharts.CrosshairMode.Normal
+                    mode: LightweightCharts.CrosshairMode.Normal,
                 },
-
                 rightPriceScale: {
+                    borderColor: '#333',
                     visible: true,
-                    autoScale: true,
-                    borderVisible: true,
-                    borderColor: '#48505e',
-
-                    entireTextOnly: false,
-
                     scaleMargins: {
-                        top: 0.08,
-                        bottom: 0.08
-                    }
+                        top: 0.1,
+                        bottom: 0.2,
+                    },
                 },
-
-                leftPriceScale: {
-                    visible: false
-                },
-
                 timeScale: {
-                    visible: true,
-                    borderVisible: true,
-                    borderColor: '#48505e',
+                    borderColor: '#333',
                     timeVisible: true,
                     secondsVisible: false,
-                    rightOffset: 4,
-                    barSpacing: 7,
-                    minBarSpacing: 0.5
                 },
+            });
 
-                handleScale: {
-                    axisPressedMouseMove: {
-                        time: true,
-                        price: true
-                    },
-                    mouseWheel: true,
-                    pinch: true
+            candlestickSeries = chart.addCandlestickSeries({
+                upColor: '#26a69a',
+                downColor: '#ef5350',
+                borderVisible: false,
+                wickUpColor: '#26a69a',
+                wickDownColor: '#ef5350',
+            });
+
+            // تنظیم ابعاد بوم و رخدادها
+            resizeCanvas();
+            window.addEventListener('resize', () => {
+                resizeCanvas();
+                redrawCanvas();
+            });
+
+            chart.timeScale().subscribeVisibleLogicalRangeChange(() => {
+                redrawCanvas();
+            });
+
+            setupCanvasEvents();
+            loadDefaultDataOrDemo();
+        }
+
+        function resizeCanvas() {
+            const container = document.getElementById('chartContainer');
+            const canvas = document.getElementById('drawingCanvas');
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientHeight;
+            redrawCanvas();
+        }
+
+        // بارگذاری پیش‌فرض یا نمونه
+        function loadDefaultDataOrDemo() {
+            // داده نمونه اولیه خالی یا تستی در صورت نیاز
+            document.getElementById('statusText').innerText = 'آماده به کار. لطفاً فایل CSV خود را بارگذاری کنید.';
+        }
+
+        // خواندن فایل CSV کندل‌ها
+        document.getElementById('csvFileInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            Papa.parse(file, {
+                delimiter: "", 
+                skipEmptyLines: true,
+                complete: function(results) {
+                    processCSVData(results.data);
                 },
+                error: function(err) {
+                    alert('خطا در خواندن فایل CSV: ' + err.message);
+                }
+            });
+        });
 
-                handleScroll: {
-                    mouseWheel: true,
-                    pressedMouseMove: true,
-                    horzTouchDrag: true,
-                    vertTouchDrag: true
+        function processCSVData(rows) {
+            let parsed = [];
+            for (let i = 0; i < rows.length; i++) {
+                let row = rows[i];
+                if (row.length < 5) continue;
+
+                // تشخیص ستون‌ها (پشتیبانی از ساختار متاتریدر)
+                let dateStr = row[0]?.trim();
+                let timeStr = row[1]?.trim() || "00:00:00";
+                
+                let o, h, l, c;
+                if (!isNaN(parseFloat(row[1])) && !isNaN(parseFloat(row[2]))) {
+                    // ستون 0 تاریخ، 1 تا 4 قیمت‌ها
+                    o = parseFloat(row[1]);
+                    h = parseFloat(row[2]);
+                    l = parseFloat(row[3]);
+                    c = parseFloat(row[4]);
+                } else if (!isNaN(parseFloat(row[2])) && !isNaN(parseFloat(row[3]))) {
+                    // ستون 0 تاریخ، 1 زمان، 2 تا 5 قیمت‌ها
+                    dateStr = `${row[0]} ${row[1]}`;
+                    o = parseFloat(row[2]);
+                    h = parseFloat(row[3]);
+                    l = parseFloat(row[4]);
+                    c = parseFloat(row[5]);
+                } else {
+                    continue;
+                }
+
+                let timestamp;
+                if (dateStr.includes('.')) {
+                    // فرمت متاتریدر مثل 2023.10.25
+                    let parts = dateStr.split(' ');
+                    let datePart = parts[0].replace(/\./g, '-');
+                    let timePart = parts[1] || '00:00:00';
+                    timestamp = Math.floor(new Date(`${datePart}T${timePart}`).getTime() / 1000);
+                } else {
+                    timestamp = Math.floor(new Date(dateStr).getTime() / 1000);
+                }
+
+                if (!isNaN(timestamp) && !isNaN(o) && !isNaN(h) && !isNaN(l) && !isNaN(c)) {
+                    parsed.push({
+                        time: timestamp,
+                        open: o,
+                        high: h,
+                        low: l,
+                        close: c
+                    });
                 }
             }
-        );
 
-        candleSeries = chart.addCandlestickSeries({
-            priceScaleId: 'right',
-
-            upColor: '#089981',
-            downColor: '#f23645',
-
-            borderUpColor: '#089981',
-            borderDownColor: '#f23645',
-
-            wickUpColor: '#089981',
-            wickDownColor: '#f23645',
-
-            priceLineVisible: true,
-            lastValueVisible: true,
-
-            priceFormat: {
-                type: 'price',
-                precision: determinePrecision(rawCandles),
-                minMove: determineMinMove(rawCandles)
-            }
-        });
-
-        chart.subscribeCrosshairMove(handleCrosshairMove);
-
-        chart.timeScale().subscribeVisibleLogicalRangeChange(
-            redrawCanvas
-        );
-
-        chart.timeScale().subscribeVisibleTimeRangeChange(
-            redrawCanvas
-        );
-
-        resizeChart();
-    }
-
-
-    function determinePrecision(data) {
-        if (!data.length) {
-            return 5;
-        }
-
-        const sample = data
-            .slice(0, 100)
-            .flatMap(item => [
-                item.open,
-                item.high,
-                item.low,
-                item.close
-            ]);
-
-        let precision = 2;
-
-        sample.forEach(number => {
-            const stringNumber =
-                Number(number).toFixed(8).replace(/0+$/, '');
-
-            const decimalPart =
-                stringNumber.split('.')[1];
-
-            if (decimalPart) {
-                precision = Math.max(
-                    precision,
-                    decimalPart.length
-                );
-            }
-        });
-
-        return Math.min(precision, 8);
-    }
-
-
-    function determineMinMove(data) {
-        const precision = determinePrecision(data);
-        return Math.pow(10, -precision);
-    }
-
-
-    function updatePriceFormat() {
-        if (!candleSeries) {
-            return;
-        }
-
-        candleSeries.applyOptions({
-            priceScaleId: 'right',
-            priceLineVisible: true,
-            lastValueVisible: true,
-
-            priceFormat: {
-                type: 'price',
-                precision: determinePrecision(rawCandles),
-                minMove: determineMinMove(rawCandles)
-            }
-        });
-
-        chart.priceScale('right').applyOptions({
-            visible: true,
-            autoScale: true,
-            borderVisible: true,
-            entireTextOnly: false,
-            scaleMargins: {
-                top: 0.08,
-                bottom: 0.08
-            }
-        });
-    }
-
-
-    function resizeChart() {
-        if (!chart) {
-            return;
-        }
-
-        const width =
-            chartContainer.clientWidth;
-
-        const height =
-            chartContainer.clientHeight;
-
-        chart.resize(width, height);
-
-        const dpr =
-            window.devicePixelRatio || 1;
-
-        canvas.width =
-            Math.floor(width * dpr);
-
-        canvas.height =
-            Math.floor(height * dpr);
-
-        canvas.style.width =
-            `${width}px`;
-
-        canvas.style.height =
-            `${height}px`;
-
-        ctx.setTransform(
-            dpr,
-            0,
-            0,
-            dpr,
-            0,
-            0
-        );
-
-        redrawCanvas();
-    }
-
-
-    function applyData(fitContent = true) {
-        initChart();
-
-        visibleCandles =
-            aggregate(rawCandles, currentTf);
-
-        candleSeries.setData(visibleCandles);
-
-        updatePriceFormat();
-
-        if (fitContent && visibleCandles.length) {
-            chart.timeScale().fitContent();
-        }
-
-        redrawCanvas();
-    }
-
-
-    function handleCrosshairMove(parameter) {
-        if (
-            !parameter ||
-            !parameter.time ||
-            !parameter.seriesData
-        ) {
-            return;
-        }
-
-        const candle =
-            parameter.seriesData.get(candleSeries);
-
-        if (!candle) {
-            return;
-        }
-
-        const candleClass =
-            candle.close >= candle.open
-                ? 'up'
-                : 'down';
-
-        const timestamp =
-            normalizeTime(parameter.time);
-
-        const date =
-            timestamp
-                ? new Date(timestamp * 1000)
-                    .toISOString()
-                    .slice(0, 16)
-                    .replace('T', ' ')
-                : '';
-
-        document.getElementById('legend').innerHTML = `
-            <span>${date}</span>
-            <span>O:
-                <b class="${candleClass}">
-                    ${candle.open}
-                </b>
-            </span>
-            <span>H:
-                <b class="${candleClass}">
-                    ${candle.high}
-                </b>
-            </span>
-            <span>L:
-                <b class="${candleClass}">
-                    ${candle.low}
-                </b>
-            </span>
-            <span>C:
-                <b class="${candleClass}">
-                    ${candle.close}
-                </b>
-            </span>
-        `;
-    }
-
-
-    function aggregate(data, seconds) {
-        if (seconds <= 60) {
-            return [...data];
-        }
-
-        const buckets = new Map();
-
-        data.forEach(candle => {
-            const bucketTime =
-                Math.floor(candle.time / seconds) * seconds;
-
-            if (!buckets.has(bucketTime)) {
-                buckets.set(bucketTime, {
-                    time: bucketTime,
-                    open: candle.open,
-                    high: candle.high,
-                    low: candle.low,
-                    close: candle.close
-                });
-
-                return;
-            }
-
-            const bucket =
-                buckets.get(bucketTime);
-
-            bucket.high =
-                Math.max(bucket.high, candle.high);
-
-            bucket.low =
-                Math.min(bucket.low, candle.low);
-
-            bucket.close =
-                candle.close;
-        });
-
-        return [...buckets.values()]
-            .sort((a, b) => a.time - b.time);
-    }
-
-
-    function getCanvasPoint(event) {
-        const rect =
-            canvas.getBoundingClientRect();
-
-        return {
-            x: event.clientX - rect.left,
-            y: event.clientY - rect.top
-        };
-    }
-
-
-    function chartPointFromCoordinate(x, y) {
-        if (!chart || !candleSeries) {
-            return null;
-        }
-
-        const rawTime =
-            chart.timeScale().coordinateToTime(x);
-
-        const time =
-            normalizeTime(rawTime);
-
-        const price =
-            candleSeries.coordinateToPrice(y);
-
-        if (
-            time === null ||
-            price === null ||
-            !Number.isFinite(price)
-        ) {
-            return null;
-        }
-
-        return {
-            time,
-            price
-        };
-    }
-
-
-    function coordinateFromChartPoint(time, price) {
-        if (!chart || !candleSeries) {
-            return null;
-        }
-
-        const x =
-            chart.timeScale().timeToCoordinate(time);
-
-        const y =
-            candleSeries.priceToCoordinate(price);
-
-        if (
-            x === null ||
-            y === null ||
-            !Number.isFinite(x) ||
-            !Number.isFinite(y)
-        ) {
-            return null;
-        }
-
-        return {
-            x,
-            y
-        };
-    }
-
-
-    function distanceToSegment(point, start, end) {
-        const dx =
-            end.x - start.x;
-
-        const dy =
-            end.y - start.y;
-
-        if (dx === 0 && dy === 0) {
-            return Math.hypot(
-                point.x - start.x,
-                point.y - start.y
-            );
-        }
-
-        const ratio =
-            Math.max(
-                0,
-                Math.min(
-                    1,
-                    (
-                        (point.x - start.x) * dx +
-                        (point.y - start.y) * dy
-                    ) / (dx * dx + dy * dy)
-                )
-            );
-
-        const closestX =
-            start.x + ratio * dx;
-
-        const closestY =
-            start.y + ratio * dy;
-
-        return Math.hypot(
-            point.x - closestX,
-            point.y - closestY
-        );
-    }
-
-
-    function hitTest(point) {
-        for (
-            let index = lines.length - 1;
-            index >= 0;
-            index--
-        ) {
-            const line = lines[index];
-
-            const start =
-                coordinateFromChartPoint(
-                    line.time1,
-                    line.price1
-                );
-
-            const end =
-                coordinateFromChartPoint(
-                    line.time2,
-                    line.price2
-                );
-
-            if (!start || !end) {
-                continue;
-            }
-
-            if (
-                Math.hypot(
-                    point.x - start.x,
-                    point.y - start.y
-                ) <= 10
-            ) {
-                return {
-                    index,
-                    part: 'start'
-                };
-            }
-
-            if (
-                Math.hypot(
-                    point.x - end.x,
-                    point.y - end.y
-                ) <= 10
-            ) {
-                return {
-                    index,
-                    part: 'end'
-                };
-            }
-
-            if (
-                distanceToSegment(
-                    point,
-                    start,
-                    end
-                ) <= 8
-            ) {
-                return {
-                    index,
-                    part: 'line'
-                };
+            if (parsed.length > 0) {
+                // مرتب‌سازی بر اساس زمان
+                parsed.sort((a, b) => a.time - b.time);
+                candleData = parsed;
+                candlestickSeries.setData(candleData);
+                chart.timeScale().fitContent();
+                document.getElementById('statusText').innerText = `تعداد ${candleData.length} کندل با موفقیت بارگذاری شد.`;
+            } else {
+                alert('فرمت ستون‌های OHLC در فایل یافت نشد. لطفاً خروجی Bars متاتریدر را بررسی کنید.');
             }
         }
 
-        return null;
-    }
-
-
-    function setSelectedLine(index) {
-        selectedLineIndex =
-            Number.isInteger(index)
-                ? index
-                : null;
-
-        const hasSelection =
-            selectedLineIndex !== null &&
-            lines[selectedLineIndex];
-
-        duplicateLineButton.disabled =
-            !hasSelection;
-
-        deleteLineButton.disabled =
-            !hasSelection;
-
-        if (hasSelection) {
-            styleSelect.value =
-                lines[selectedLineIndex].style || 'solid';
-
-            colorPicker.value =
-                lines[selectedLineIndex].color || '#2962ff';
-
-            setStatus(
-                `خط شماره ${selectedLineIndex + 1} انتخاب شد.`
-            );
+        // مدیریت ابزار رسم
+        function setDrawingTool(tool) {
+            currentTool = tool;
+            selectedLineIndex = null;
+            
+            document.getElementById('toolSelect').className = tool === 'select' ? 'px-2 py-1 rounded bg-blue-600 text-white transition' : 'px-2 py-1 rounded hover:bg-[#444] text-gray-300 transition';
+            document.getElementById('toolLine').className = tool === 'line' ? 'px-2 py-1 rounded bg-blue-600 text-white transition' : 'px-2 py-1 rounded hover:bg-[#444] text-gray-300 transition';
+            
+            const canvas = document.getElementById('drawingCanvas');
+            canvas.style.pointerEvents = tool === 'line' ? 'auto' : 'auto';
+            redrawCanvas();
         }
 
-        redrawCanvas();
-    }
+        // رویدادهای ماوس روی بوم رسم
+        function setupCanvasEvents() {
+            const canvas = document.getElementById('drawingCanvas');
 
+            canvas.addEventListener('mousedown', (e) => {
+                const rect = canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
 
-    function setDrawingMode(enabled) {
-        drawingMode = enabled;
+                if (currentTool === 'line') {
+                    isDrawing = true;
+                    startPoint = { x, y };
+                    currentMousePoint = { x, y };
+                } else if (currentTool === 'select') {
+                    // بررسی کلیک روی خطوط برای انتخاب یا جابجایی
+                    let clickedIndex = findLineAt(x, y);
+                    if (clickedIndex !== null) {
+                        selectedLineIndex = clickedIndex;
+                        draggingLineIndex = clickedIndex;
+                        const line = drawings[clickedIndex];
+                        const p1 = coordToPixel(line.time1, line.price1);
+                        dragOffset = { x: x - p1.x, y: y - p1.y };
+                    } else {
+                        selectedLineIndex = null;
+                    }
+                    redrawCanvas();
+                }
+            });
 
-        toolLineBtn.classList.toggle(
-            'active',
-            drawingMode
-        );
+            canvas.addEventListener('mousemove', (e) => {
+                const rect = canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
 
-        canvas.classList.toggle(
-            'interactive',
-            drawingMode || lines.length > 0
-        );
+                if (isDrawing && currentTool === 'line') {
+                    currentMousePoint = { x, y };
+                    redrawCanvas();
+                    drawTempLine(startPoint, currentMousePoint);
+                } else if (currentTool === 'select' && draggingLineIndex !== null) {
+                    // جابجایی کل خط
+                    let line = drawings[draggingLineIndex];
+                    let p1Old = coordToPixel(line.time1, line.price1);
+                    let p2Old = coordToPixel(line.time2, line.price2);
+                    
+                    let dx = x - dragOffset.x - p1Old.x;
+                    let dy = y - dragOffset.y - p1Old.y;
 
-        canvas.classList.toggle(
-            'drawing',
-            drawingMode
-        );
+                    let newP1 = { x: p1Old.x + dx, y: p1Old.y + dy };
+                    let newP2 = { x: p2Old.x + dx, y: p2Old.y + dy };
 
-        toolLineBtn.textContent =
-            drawingMode
-                ? '✅ ابزار خط فعال'
-                : '✏️ ترسیم خط';
+                    let c1 = pixelToCoord(newP1.x, newP1.y);
+                    let c2 = pixelToCoord(newP2.x, newP2.y);
 
-        setStatus(
-            drawingMode
-                ? 'روی چارت کلیک کنید، بکشید و رها کنید.'
-                : 'ابزار ترسیم غیرفعال شد.'
-        );
-    }
+                    line.time1 = c1.time;
+                    line.price1 = c1.price;
+                    line.time2 = c2.time;
+                    line.price2 = c2.price;
 
+                    dragOffset = { x: x - newP1.x, y: y - newP1.y };
+                    redrawCanvas();
+                }
+            });
 
-    function syncCanvasInteractivity() {
-        canvas.classList.toggle(
-            'interactive',
-            drawingMode || lines.length > 0
-        );
-    }
+            canvas.addEventListener('mouseup', (e) => {
+                if (isDrawing && currentTool === 'line' && startPoint && currentMousePoint) {
+                    const rect = canvas.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    const y = e.clientY - rect.top;
 
+                    let c1 = pixelToCoord(startPoint.x, startPoint.y);
+                    let c2 = pixelToCoord(x, y);
 
-    function redrawCanvas() {
-        const width =
-            chartContainer.clientWidth;
+                    if (c1 && c2) {
+                        drawings.push({
+                            time1: c1.time,
+                            price1: c1.price,
+                            time2: c2.time,
+                            price2: c2.price,
+                            color: document.getElementById('lineColor').value,
+                            style: document.getElementById('lineStyle').value
+                        });
+                    }
+                    isDrawing = false;
+                    startPoint = null;
+                    currentMousePoint = null;
+                    setDrawingTool('select');
+                    redrawCanvas();
+                }
+                draggingLineIndex = null;
+            });
+        }
 
-        const height =
-            chartContainer.clientHeight;
+        function coordToPixel(time, price) {
+            const timeScale = chart.timeScale();
+            const x = timeScale.timeToCoordinate(time);
+            const y = candlestickSeries.priceToCoordinate(price);
+            return { x: x !== null ? x : -100, y: y !== null ? y : -100 };
+        }
 
-        ctx.clearRect(
-            0,
-            0,
-            width,
-            height
-        );
+        function pixelToCoord(x, y) {
+            const timeScale = chart.timeScale();
+            const time = timeScale.coordinateToTime(x);
+            const price = candlestickSeries.coordinateToPrice(y);
+            return { time, price };
+        }
 
-        lines.forEach((line, index) => {
-            const start =
-                coordinateFromChartPoint(
-                    line.time1,
-                    line.price1
-                );
+        function redrawCanvas() {
+            const canvas = document.getElementById('drawingCanvas');
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            const end =
-                coordinateFromChartPoint(
-                    line.time2,
-                    line.price2
-                );
+            drawings.forEach((line, index) => {
+                let p1 = coordToPixel(line.time1, line.price1);
+                let p2 = coordToPixel(line.time2, line.price2);
 
-            if (!start || !end) {
-                return;
-            }
+                ctx.save();
+                ctx.beginPath();
+                ctx.strokeStyle = line.color;
+                ctx.lineWidth = (index === selectedLineIndex) ? 3 : 2;
 
+                if (line.style === 'dashed') {
+                    ctx.setLineDash([6, 6]);
+                } else if (line.style === 'dotted') {
+                    ctx.setLineDash([2, 4]);
+                } else {
+                    ctx.setLineDash([]);
+                }
+
+                ctx.moveTo(p1.x, p1.y);
+                ctx.lineTo(p2.x, p2.y);
+                ctx.stroke();
+
+                // رسم لنگرهای انتخاب
+                if (index === selectedLineIndex) {
+                    ctx.fillStyle = '#ffffff';
+                    ctx.strokeStyle = line.color;
+                    ctx.lineWidth = 2;
+                    
+                    [p1, p2].forEach(p => {
+                        ctx.beginPath();
+                        ctx.arc(p.x, p.y, 5, 0, Math.PI * 2);
+                        ctx.fill();
+                        ctx.stroke();
+                    });
+                }
+                ctx.restore();
+            });
+        }
+
+        function drawTempLine(p1, p2) {
+            const canvas = document.getElementById('drawingCanvas');
+            const ctx = canvas.getContext('2d');
             ctx.save();
-
-            ctx.strokeStyle =
-                line.color || '#2962ff';
-
-            ctx.lineWidth =
-                index === selectedLineIndex
-                    ? 3
-                    : 2;
-
-            ctx.lineCap = 'round';
-
-            if (line.style === 'dashed') {
-                ctx.setLineDash([10, 7]);
-            } else if (line.style === 'dotted') {
-                ctx.setLineDash([2, 6]);
-            } else {
-                ctx.setLineDash([]);
-            }
-
             ctx.beginPath();
-            ctx.moveTo(start.x, start.y);
-            ctx.lineTo(end.x, end.y);
+            ctx.strokeStyle = document.getElementById('lineColor').value;
+            ctx.lineWidth = 2;
+            
+            let style = document.getElementById('lineStyle').value;
+            if (style === 'dashed') ctx.setLineDash([6, 6]);
+            else if (style === 'dotted') ctx.setLineDash([2, 4]);
+
+            ctx.moveTo(p1.x, p1.y);
+            ctx.lineTo(p2.x, p2.y);
             ctx.stroke();
-
-            if (index === selectedLineIndex) {
-                drawAnchor(start);
-                drawAnchor(end);
-            }
-
             ctx.restore();
-        });
-    }
+        }
 
+        function findLineAt(x, y) {
+            for (let i = drawings.length - 1; i >= 0; i--) {
+                let line = drawings[i];
+                let p1 = coordToPixel(line.time1, line.price1);
+                let p2 = coordToPixel(line.time2, line.price2);
 
-    function drawAnchor(point) {
-        ctx.save();
+                // فاصله نقطه تا پاره‌خط
+                let dist = distToSegment({x, y}, p1, p2);
+                if (dist < 8) return i;
+            }
+            return null;
+        }
 
-        ctx.setLineDash([]);
+        function distToSegment(p, p1, p2) {
+            let l2 = (p2.x - p1.x)**2 + (p2.y - p1.y)**2;
+            if (l2 === 0) return Math.hypot(p.x - p1.x, p.y - p1.y);
+            let t = ((p.x - p1.x) * (p2.x - p1.x) + (p.y - p1.y) * (p2.y - p1.y)) / l2;
+            t = Math.max(0, Math.min(1, t));
+            return Math.hypot(p.x - (p1.x + t * (p2.x - p1.x)), p.y - (p1.y + t * (p2.y - p1.y)));
+        }
 
-        ctx.beginPath();
-        ctx.arc(
-            point.x,
-            point.y,
-            6,
-            0,
-            Math.PI * 2
-        );
-
-        ctx.fillStyle = '#ffffff';
-        ctx.fill();
-
-        ctx.lineWidth = 2;
-        ctx.strokeStyle = '#2962ff';
-        ctx.stroke();
-
-        ctx.restore();
-    }
-
-
-    canvas.addEventListener(
-        'pointerdown',
-        event => {
-            if (!chart || !candleSeries) {
+        // کپی خط انتخاب شده با فاصله (آفست واضح)
+        function duplicateSelectedLine() {
+            if (selectedLineIndex === null || !drawings[selectedLineIndex]) {
+                alert('لطفاً ابتدا یک خط را روی نمودار انتخاب کنید.');
                 return;
             }
+            let original = drawings[selectedLineIndex];
+            
+            // محاسبه آفست بر اساس پیکسل برای جابجایی واضح خط جدید
+            let p1 = coordToPixel(original.time1, original.price1);
+            let p2 = coordToPixel(original.time2, original.price2);
+            
+            let newP1 = coordToPixel(original.time1, original.price1);
+            let newP2 = coordToPixel(original.time2, original.price2);
+            
+            // جابجایی 30 پیکسل به سمت پایین و راست
+            let c1 = pixelToCoord(p1.x + 30, p1.y + 30);
+            let c2 = pixelToCoord(p2.x + 30, p2.y + 30);
 
-            event.preventDefault();
+            let duplicated = {
+                time1: c1.time || original.time1,
+                price1: c1.price ? original.price1 - (original.price1 * 0.005) : original.price1,
+                time2: c2.time || original.time2,
+                price2: c2.price ? original.price2 - (original.price2 * 0.005) : original.price2,
+                color: original.color,
+                style: original.style
+            };
 
-            canvas.setPointerCapture(
-                event.pointerId
-            );
+            drawings.push(duplicated);
+            selectedLineIndex = drawings.length - 1;
+            redrawCanvas();
+        }
 
-            pointerDown = true;
-
-            const coordinate =
-                getCanvasPoint(event);
-
-            const chartPoint =
-                chartPointFromCoordinate(
-                    coordinate.x,
-                    coordinate.y
-                );
-
-            if (!chartPoint) {
-                pointerDown = false;
+        function deleteSelectedLine() {
+            if (selectedLineIndex === null) {
+                alert('لطفاً ابتدا خطی را انتخاب کنید.');
                 return;
             }
+            drawings.splice(selectedLineIndex, 1);
+            selectedLineIndex = null;
+            redrawCanvas();
+        }
 
-            if (drawingMode) {
-                const newLine = {
-                    time1: chartPoint.time,
-                    price1: chartPoint.price,
-                    time2: chartPoint.time,
-                    price2: chartPoint.price,
-                    style: styleSelect.value,
-                    color: colorPicker.value
-                };
-
-                lines.push(newLine);
-
-                currentDrawingIndex =
-                    lines.length - 1;
-
-                setSelectedLine(
-                    currentDrawingIndex
-                );
-
-                syncCanvasInteractivity();
+        function clearDrawings() {
+            if (confirm('آیا از پاک کردن تمام خطوط ترسیمی اطمینان دارید؟')) {
+                drawings = [];
+                selectedLineIndex = null;
                 redrawCanvas();
-                return;
             }
-
-            const hit =
-                hitTest(coordinate);
-
-            if (!hit) {
-                setSelectedLine(null);
-                dragMode = null;
-                pointerDown = false;
-                return;
-            }
-
-            setSelectedLine(hit.index);
-
-            dragMode = hit.part;
-
-            lastDragPoint =
-                chartPoint;
         }
-    );
 
-
-    canvas.addEventListener(
-        'pointermove',
-        event => {
-            if (!pointerDown) {
-                return;
-            }
-
-            event.preventDefault();
-
-            const coordinate =
-                getCanvasPoint(event);
-
-            const chartPoint =
-                chartPointFromCoordinate(
-                    coordinate.x,
-                    coordinate.y
-                );
-
-            if (!chartPoint) {
-                return;
-            }
-
-            if (
-                drawingMode &&
-                currentDrawingIndex !== null
-            ) {
-                const line =
-                    lines[currentDrawingIndex];
-
-                line.time2 =
-                    chartPoint.time;
-
-                line.price2 =
-                    chartPoint.price;
-
+        function clearEntirePage() {
+            if (confirm('هشدار: کل صفحه، کندل‌ها و تمام خطوط پاک خواهند شد. ادامه می‌دهید؟')) {
+                candleData = [];
+                drawings = [];
+                selectedLineIndex = null;
+                candlestickSeries.setData([]);
                 redrawCanvas();
-                return;
-            }
-
-            if (
-                selectedLineIndex === null ||
-                !dragMode
-            ) {
-                return;
-            }
-
-            const line =
-                lines[selectedLineIndex];
-
-            if (dragMode === 'start') {
-                line.time1 =
-                    chartPoint.time;
-
-                line.price1 =
-                    chartPoint.price;
-            } else if (dragMode === 'end') {
-                line.time2 =
-                    chartPoint.time;
-
-                line.price2 =
-                    chartPoint.price;
-            } else if (
-                dragMode === 'line' &&
-                lastDragPoint
-            ) {
-                const deltaTime =
-                    chartPoint.time -
-                    lastDragPoint.time;
-
-                const deltaPrice =
-                    chartPoint.price -
-                    lastDragPoint.price;
-
-                line.time1 += deltaTime;
-                line.time2 += deltaTime;
-
-                line.price1 += deltaPrice;
-                line.price2 += deltaPrice;
-
-                lastDragPoint =
-                    chartPoint;
-            }
-
-            redrawCanvas();
-        }
-    );
-
-
-    function finishPointer(event) {
-        if (
-            canvas.hasPointerCapture &&
-            canvas.hasPointerCapture(event.pointerId)
-        ) {
-            canvas.releasePointerCapture(
-                event.pointerId
-            );
-        }
-
-        pointerDown = false;
-        currentDrawingIndex = null;
-        dragMode = null;
-        lastDragPoint = null;
-
-        redrawCanvas();
-    }
-
-
-    canvas.addEventListener(
-        'pointerup',
-        finishPointer
-    );
-
-    canvas.addEventListener(
-        'pointercancel',
-        finishPointer
-    );
-
-
-    function duplicateSelectedLine() {
-        if (
-            selectedLineIndex === null ||
-            !lines[selectedLineIndex]
-        ) {
-            alert('ابتدا یک خط را انتخاب کنید.');
-            return;
-        }
-
-        const original =
-            lines[selectedLineIndex];
-
-        const visibleRange =
-            chart.timeScale().getVisibleRange();
-
-        let timeOffset =
-            currentTf * 5;
-
-        if (
-            visibleRange &&
-            normalizeTime(visibleRange.from) !== null &&
-            normalizeTime(visibleRange.to) !== null
-        ) {
-            timeOffset =
-                Math.max(
-                    currentTf,
-                    Math.round(
-                        (
-                            normalizeTime(visibleRange.to) -
-                            normalizeTime(visibleRange.from)
-                        ) * 0.015
-                    )
-                );
-        }
-
-        let priceOffset =
-            Math.abs(
-                original.price2 -
-                original.price1
-            ) * 0.12;
-
-        if (!priceOffset) {
-            const referencePrice =
-                Math.max(
-                    Math.abs(original.price1),
-                    1
-                );
-
-            priceOffset =
-                referencePrice * 0.003;
-        }
-
-        const duplicate = {
-            time1:
-                original.time1 + timeOffset,
-
-            price1:
-                original.price1 + priceOffset,
-
-            time2:
-                original.time2 + timeOffset,
-
-            price2:
-                original.price2 + priceOffset,
-
-            style:
-                original.style,
-
-            color:
-                original.color
-        };
-
-        lines.push(duplicate);
-
-        setSelectedLine(
-            lines.length - 1
-        );
-
-        syncCanvasInteractivity();
-
-        setStatus('یک کپی از خط ساخته شد.');
-    }
-
-
-    function deleteSelectedLine() {
-        if (
-            selectedLineIndex === null ||
-            !lines[selectedLineIndex]
-        ) {
-            alert('ابتدا یک خط را انتخاب کنید.');
-            return;
-        }
-
-        lines.splice(
-            selectedLineIndex,
-            1
-        );
-
-        setSelectedLine(null);
-        syncCanvasInteractivity();
-
-        setStatus('خط انتخاب‌شده حذف شد.');
-    }
-
-
-    function clearAllLines() {
-        if (!lines.length) {
-            setStatus('خطی برای حذف وجود ندارد.');
-            return;
-        }
-
-        if (
-            !confirm(
-                'آیا تمام خطوط ترسیمی پاک شوند؟'
-            )
-        ) {
-            return;
-        }
-
-        lines = [];
-
-        setSelectedLine(null);
-        syncCanvasInteractivity();
-        redrawCanvas();
-
-        setStatus('همه خطوط پاک شدند.');
-    }
-
-
-    function clearEntirePage() {
-        if (
-            !rawCandles.length &&
-            !lines.length
-        ) {
-            setStatus('صفحه از قبل خالی است.');
-            return;
-        }
-
-        if (
-            !confirm(
-                'تمام کندل‌ها و ترسیمات پاک شوند؟ این عملیات قابل بازگشت نیست.'
-            )
-        ) {
-            return;
-        }
-
-        rawCandles = [];
-        visibleCandles = [];
-        lines = [];
-
-        setSelectedLine(null);
-        setDrawingMode(false);
-
-        if (candleSeries) {
-            candleSeries.setData([]);
-        }
-
-        redrawCanvas();
-
-        setStatus(
-            'تمام صفحه شامل کندل‌ها و ترسیمات پاک شد.'
-        );
-    }
-
-
-    styleSelect.addEventListener(
-        'change',
-        () => {
-            if (
-                selectedLineIndex === null ||
-                !lines[selectedLineIndex]
-            ) {
-                return;
-            }
-
-            lines[selectedLineIndex].style =
-                styleSelect.value;
-
-            redrawCanvas();
-        }
-    );
-
-
-    colorPicker.addEventListener(
-        'input',
-        () => {
-            if (
-                selectedLineIndex === null ||
-                !lines[selectedLineIndex]
-            ) {
-                return;
-            }
-
-            lines[selectedLineIndex].color =
-                colorPicker.value;
-
-            redrawCanvas();
-        }
-    );
-
-
-    toolLineBtn.addEventListener(
-        'click',
-        () => {
-            setDrawingMode(!drawingMode);
-        }
-    );
-
-
-    duplicateLineButton.addEventListener(
-        'click',
-        duplicateSelectedLine
-    );
-
-
-    deleteLineButton.addEventListener(
-        'click',
-        deleteSelectedLine
-    );
-
-
-    clearLinesButton.addEventListener(
-        'click',
-        clearAllLines
-    );
-
-
-    clearPageButton.addEventListener(
-        'click',
-        clearEntirePage
-    );
-
-
-    document.addEventListener(
-        'keydown',
-        event => {
-            const targetTag =
-                event.target.tagName.toLowerCase();
-
-            if (
-                targetTag === 'input' ||
-                targetTag === 'select' ||
-                targetTag === 'textarea'
-            ) {
-                return;
-            }
-
-            if (
-                event.key === 'Delete' ||
-                event.key === 'Backspace'
-            ) {
-                event.preventDefault();
-                deleteSelectedLine();
-            }
-
-            if (
-                (event.ctrlKey || event.metaKey) &&
-                event.key.toLowerCase() === 'd'
-            ) {
-                event.preventDefault();
-                duplicateSelectedLine();
-            }
-
-            if (event.key === 'Escape') {
-                setDrawingMode(false);
-                setSelectedLine(null);
+                document.getElementById('statusText').innerText = 'صفحه کامل پاک شد.';
             }
         }
-    );
 
-
-    document.getElementById('openCsvButton')
-        .addEventListener(
-            'click',
-            () => {
-                document.getElementById('csvFile').click();
-            }
-        );
-
-
-    document.getElementById('updateCsvButton')
-        .addEventListener(
-            'click',
-            () => {
-                document.getElementById('updateFile').click();
-            }
-        );
-
-
-    document.getElementById('loadProjectButton')
-        .addEventListener(
-            'click',
-            () => {
-                document.getElementById('loadProjectFile').click();
-            }
-        );
-
-
-    document.getElementById('saveProjectButton')
-        .addEventListener(
-            'click',
-            saveProject
-        );
-
-
-    document.getElementById('screenshotButton')
-        .addEventListener(
-            'click',
-            takeScreenshot
-        );
-
-
-    document.getElementById('csvFile')
-        .addEventListener(
-            'change',
-            event => handleCsvFile(event, false)
-        );
-
-
-    document.getElementById('updateFile')
-        .addEventListener(
-            'change',
-            event => handleCsvFile(event, true)
-        );
-
-
-    function handleCsvFile(event, updateOnly) {
-        const input =
-            event.target;
-
-        const file =
-            input.files[0];
-
-        if (!file) {
-            return;
+        // ذخیره و بارگذاری پروژه
+        function saveProject() {
+            const projectData = {
+                candles: candleData,
+                drawings: drawings
+            };
+            const blob = new Blob([JSON.stringify(projectData, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'trading_project.csv';
+            a.click();
+            URL.revokeObjectURL(url);
         }
 
-        Papa.parse(file, {
-            header: false,
-            skipEmptyLines: true,
+        document.getElementById('projectFileInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
 
-            complete: result => {
-                parseMetaTraderRows(
-                    result.data,
-                    updateOnly
-                );
-
-                input.value = '';
-            },
-
-            error: error => {
-                alert(
-                    `خطا در خواندن فایل: ${error.message}`
-                );
-
-                input.value = '';
-            }
-        });
-    }
-
-
-    function parseMetaTraderRows(rows, updateOnly) {
-        if (!rows || rows.length < 1) {
-            alert('فایل خالی است.');
-            return;
-        }
-
-        const normalizedHeader =
-            rows[0].map(value =>
-                String(value)
-                    .trim()
-                    .toLowerCase()
-                    .replace(/[^a-z0-9]/g, '')
-            );
-
-        const hasHeader =
-            normalizedHeader.some(
-                value =>
-                    value.includes('open') ||
-                    value.includes('high') ||
-                    value.includes('close') ||
-                    value.includes('date')
-            );
-
-        let dateIndex = 0;
-        let timeIndex = -1;
-        let openIndex = -1;
-        let highIndex = -1;
-        let lowIndex = -1;
-        let closeIndex = -1;
-
-        if (hasHeader) {
-            normalizedHeader.forEach(
-                (column, index) => {
-                    if (
-                        column === 'open' ||
-                        column === 'o'
-                    ) {
-                        openIndex = index;
-                    } else if (
-                        column === 'high' ||
-                        column === 'h'
-                    ) {
-                        highIndex = index;
-                    } else if (
-                        column === 'low' ||
-                        column === 'l'
-                    ) {
-                        lowIndex = index;
-                    } else if (
-                        column === 'close' ||
-                        column === 'c'
-                    ) {
-                        closeIndex = index;
-                    } else if (
-                        column.includes('date')
-                    ) {
-                        dateIndex = index;
-                    } else if (
-                        column.includes('time')
-                    ) {
-                        timeIndex = index;
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                try {
+                    const data = JSON.parse(evt.target.result);
+                    if (data.candles) {
+                        candleData = data.candles;
+                        candlestickSeries.setData(candleData);
+                        chart.timeScale().fitContent();
                     }
-                }
-            );
-        }
-
-        const firstDataRow =
-            rows[hasHeader ? 1 : 0] || [];
-
-        if (
-            openIndex < 0 ||
-            highIndex < 0 ||
-            lowIndex < 0 ||
-            closeIndex < 0
-        ) {
-            if (
-                firstDataRow[1] &&
-                String(firstDataRow[1]).includes(':')
-            ) {
-                dateIndex = 0;
-                timeIndex = 1;
-                openIndex = 2;
-                highIndex = 3;
-                lowIndex = 4;
-                closeIndex = 5;
-            } else {
-                dateIndex = 0;
-                timeIndex = -1;
-                openIndex = 1;
-                highIndex = 2;
-                lowIndex = 3;
-                closeIndex = 4;
-            }
-        }
-
-        const startRow =
-            hasHeader ? 1 : 0;
-
-        let newCandles = [];
-
-        for (
-            let index = startRow;
-            index < rows.length;
-            index++
-        ) {
-            const row = rows[index];
-
-            const requiredIndex =
-                Math.max(
-                    openIndex,
-                    highIndex,
-                    lowIndex,
-                    closeIndex,
-                    dateIndex,
-                    timeIndex
-                );
-
-            if (row.length <= requiredIndex) {
-                continue;
-            }
-
-            const open =
-                Number.parseFloat(row[openIndex]);
-
-            const high =
-                Number.parseFloat(row[highIndex]);
-
-            const low =
-                Number.parseFloat(row[lowIndex]);
-
-            const close =
-                Number.parseFloat(row[closeIndex]);
-
-            if (
-                ![open, high, low, close]
-                    .every(Number.isFinite)
-            ) {
-                continue;
-            }
-
-            const timestamp =
-                parseDateTime(
-                    row[dateIndex],
-                    timeIndex >= 0
-                        ? row[timeIndex]
-                        : null,
-                    index
-                );
-
-            newCandles.push({
-                time: timestamp,
-                open,
-                high: Math.max(
-                    open,
-                    high,
-                    low,
-                    close
-                ),
-                low: Math.min(
-                    open,
-                    high,
-                    low,
-                    close
-                ),
-                close
-            });
-        }
-
-        newCandles =
-            sortAndDeduplicate(newCandles);
-
-        if (!newCandles.length) {
-            alert(
-                'هیچ داده معتبر OHLC در فایل پیدا نشد.'
-            );
-
-            return;
-        }
-
-        if (updateOnly) {
-            /*
-             * ادغام بر اساس زمان:
-             * کندل‌های جدید جایگزین کندل‌های هم‌زمان می‌شوند.
-             * خطوط حذف یا جابه‌جا نمی‌شوند.
-             */
-            const candleMap =
-                new Map(
-                    rawCandles.map(candle => [
-                        candle.time,
-                        candle
-                    ])
-                );
-
-            newCandles.forEach(candle => {
-                candleMap.set(
-                    candle.time,
-                    candle
-                );
-            });
-
-            rawCandles =
-                sortAndDeduplicate(
-                    [...candleMap.values()]
-                );
-
-            applyData(false);
-
-            setStatus(
-                `${newCandles.length} کندل دریافت شد؛ ترسیمات حفظ شدند.`
-            );
-        } else {
-            rawCandles =
-                newCandles;
-
-            /*
-             * باز کردن فایل جدید، کندل‌ها را عوض می‌کند
-             * ولی ترسیمات موجود را حذف نمی‌کند.
-             */
-            applyData(true);
-
-            setStatus(
-                `${rawCandles.length} کندل بارگذاری شد.`
-            );
-        }
-    }
-
-
-    function parseDateTime(
-        rawDate,
-        rawTime,
-        fallbackIndex
-    ) {
-        let dateText =
-            String(rawDate ?? '').trim();
-
-        let timeText =
-            rawTime !== null &&
-            rawTime !== undefined
-                ? String(rawTime).trim()
-                : '';
-
-        dateText =
-            dateText
-                .replace(/\./g, '-')
-                .replace(/\//g, '-');
-
-        if (
-            !timeText &&
-            dateText.includes(' ')
-        ) {
-            const parts =
-                dateText.split(/\s+/);
-
-            dateText =
-                parts[0];
-
-            timeText =
-                parts.slice(1).join(' ');
-        }
-
-        if (
-            !timeText &&
-            dateText.includes('T')
-        ) {
-            const milliseconds =
-                Date.parse(dateText);
-
-            if (Number.isFinite(milliseconds)) {
-                return Math.floor(
-                    milliseconds / 1000
-                );
-            }
-        }
-
-        if (!timeText) {
-            timeText = '00:00:00';
-        }
-
-        if (/^\d{1,2}:\d{2}$/.test(timeText)) {
-            timeText += ':00';
-        }
-
-        let milliseconds =
-            Date.parse(
-                `${dateText}T${timeText}Z`
-            );
-
-        if (!Number.isFinite(milliseconds)) {
-            milliseconds =
-                Date.parse(
-                    `${dateText} ${timeText} UTC`
-                );
-        }
-
-        if (!Number.isFinite(milliseconds)) {
-            return 1600000000 +
-                fallbackIndex * 60;
-        }
-
-        return Math.floor(
-            milliseconds / 1000
-        );
-    }
-
-
-    function sortAndDeduplicate(data) {
-        data.sort(
-            (a, b) => a.time - b.time
-        );
-
-        const map =
-            new Map();
-
-        data.forEach(candle => {
-            map.set(
-                candle.time,
-                candle
-            );
-        });
-
-        return [...map.values()]
-            .sort((a, b) => a.time - b.time);
-    }
-
-
-    document.querySelectorAll('.tf-btn')
-        .forEach(button => {
-            button.addEventListener(
-                'click',
-                () => {
-                    document.querySelectorAll('.tf-btn')
-                        .forEach(item =>
-                            item.classList.remove('active')
-                        );
-
-                    button.classList.add('active');
-
-                    currentTf =
-                        Number(button.dataset.tf);
-
-                    applyData(true);
-                }
-            );
-        });
-
-
-    function saveProject() {
-        if (
-            !rawCandles.length &&
-            !lines.length
-        ) {
-            alert('اطلاعاتی برای ذخیره وجود ندارد.');
-            return;
-        }
-
-        /*
-         * ذخیره پروژه به‌صورت CSV واقعی:
-         * هر ردیف دارای نوع CANDLE یا LINE است.
-         */
-        const rows = [[
-            'record_type',
-            'time',
-            'open',
-            'high',
-            'low',
-            'close',
-            'line_id',
-            'time1',
-            'price1',
-            'time2',
-            'price2',
-            'style',
-            'color',
-            'timeframe'
-        ]];
-
-        rawCandles.forEach(candle => {
-            rows.push([
-                'CANDLE',
-                candle.time,
-                candle.open,
-                candle.high,
-                candle.low,
-                candle.close,
-                '',
-                '',
-                '',
-                '',
-                '',
-                '',
-                '',
-                currentTf
-            ]);
-        });
-
-        lines.forEach((line, index) => {
-            rows.push([
-                'LINE',
-                '',
-                '',
-                '',
-                '',
-                '',
-                index + 1,
-                line.time1,
-                line.price1,
-                line.time2,
-                line.price2,
-                line.style,
-                line.color,
-                currentTf
-            ]);
-        });
-
-        const csv =
-            Papa.unparse(rows);
-
-        const blob =
-            new Blob(
-                ['\uFEFF' + csv],
-                {
-                    type:
-                        'text/csv;charset=utf-8;'
-                }
-            );
-
-        downloadBlob(
-            blob,
-            `trader-project-${Date.now()}.csv`
-        );
-
-        setStatus(
-            'پروژه شامل کندل‌ها و خطوط در فایل CSV ذخیره شد.'
-        );
-    }
-
-
-    document.getElementById('loadProjectFile')
-        .addEventListener(
-            'change',
-            event => {
-                const input =
-                    event.target;
-
-                const file =
-                    input.files[0];
-
-                if (!file) {
-                    return;
-                }
-
-                Papa.parse(file, {
-                    header: true,
-                    skipEmptyLines: true,
-
-                    complete: result => {
-                        restoreProjectRows(
-                            result.data
-                        );
-
-                        input.value = '';
-                    },
-
-                    error: error => {
-                        alert(
-                            `خطا در بازیابی پروژه: ${error.message}`
-                        );
-
-                        input.value = '';
+                    if (data.drawings) {
+                        drawings = data.drawings;
                     }
-                });
-            }
-        );
-
-
-    function restoreProjectRows(rows) {
-        const restoredCandles = [];
-        const restoredLines = [];
-
-        let restoredTf =
-            currentTf;
-
-        rows.forEach(row => {
-            const recordType =
-                String(
-                    row.record_type || ''
-                ).trim().toUpperCase();
-
-            if (recordType === 'CANDLE') {
-                const candle = {
-                    time:
-                        Number(row.time),
-
-                    open:
-                        Number(row.open),
-
-                    high:
-                        Number(row.high),
-
-                    low:
-                        Number(row.low),
-
-                    close:
-                        Number(row.close)
-                };
-
-                if (
-                    Object.values(candle)
-                        .every(Number.isFinite)
-                ) {
-                    restoredCandles.push(candle);
+                    redrawCanvas();
+                    document.getElementById('statusText').innerText = 'پروژه با موفقیت بارگذاری شد.';
+                } catch (err) {
+                    alert('خطا در خواندن فایل پروژه.');
                 }
-            }
-
-            if (recordType === 'LINE') {
-                const line = {
-                    time1:
-                        Number(row.time1),
-
-                    price1:
-                        Number(row.price1),
-
-                    time2:
-                        Number(row.time2),
-
-                    price2:
-                        Number(row.price2),
-
-                    style:
-                        row.style || 'solid',
-
-                    color:
-                        row.color || '#2962ff'
-                };
-
-                if (
-                    [
-                        line.time1,
-                        line.price1,
-                        line.time2,
-                        line.price2
-                    ].every(Number.isFinite)
-                ) {
-                    restoredLines.push(line);
-                }
-            }
-
-            const parsedTf =
-                Number(row.timeframe);
-
-            if (Number.isFinite(parsedTf)) {
-                restoredTf = parsedTf;
-            }
+            };
+            reader.readAsText(file);
         });
 
-        if (
-            !restoredCandles.length &&
-            !restoredLines.length
-        ) {
-            alert(
-                'فایل پروژه معتبر نیست یا داده‌ای ندارد.'
-            );
-
-            return;
-        }
-
-        rawCandles =
-            sortAndDeduplicate(
-                restoredCandles
-            );
-
-        lines =
-            restoredLines;
-
-        currentTf =
-            restoredTf;
-
-        document.querySelectorAll('.tf-btn')
-            .forEach(button => {
-                button.classList.toggle(
-                    'active',
-                    Number(button.dataset.tf) === currentTf
-                );
+        // اسکرین‌شات
+        function takeScreenshot() {
+            html2canvas(document.getElementById('chartContainer')).then(canvas => {
+                const link = document.createElement('a');
+                link.download = 'chart_screenshot.png';
+                link.href = canvas.toDataURL();
+                link.click();
             });
-
-        setSelectedLine(null);
-        syncCanvasInteractivity();
-
-        applyData(true);
-
-        setStatus(
-            `${rawCandles.length} کندل و ${lines.length} خط بازیابی شد.`
-        );
-    }
-
-
-    function takeScreenshot() {
-        if (!chart) {
-            alert('ابتدا یک چارت باز کنید.');
-            return;
         }
 
-        /*
-         * Lightweight Charts فقط خود چارت را عکس می‌گیرد؛
-         * بنابراین تصویر چارت و Canvas خطوط ترکیب می‌شوند.
-         */
-        const chartCanvas =
-            chart.takeScreenshot();
-
-        const width =
-            chartContainer.clientWidth;
-
-        const height =
-            chartContainer.clientHeight;
-
-        const dpr =
-            window.devicePixelRatio || 1;
-
-        const output =
-            document.createElement('canvas');
-
-        output.width =
-            Math.floor(width * dpr);
-
-        output.height =
-            Math.floor(height * dpr);
-
-        const outputContext =
-            output.getContext('2d');
-
-        outputContext.drawImage(
-            chartCanvas,
-            0,
-            0,
-            output.width,
-            output.height
-        );
-
-        outputContext.drawImage(
-            canvas,
-            0,
-            0,
-            output.width,
-            output.height
-        );
-
-        output.toBlob(blob => {
-            if (!blob) {
-                alert('ساخت تصویر ناموفق بود.');
-                return;
-            }
-
-            downloadBlob(
-                blob,
-                `chart-${Date.now()}.png`
-            );
-
-            setStatus('تصویر چارت ذخیره شد.');
-        }, 'image/png');
-    }
-
-
-    function downloadBlob(blob, fileName) {
-        const url =
-            URL.createObjectURL(blob);
-
-        const anchor =
-            document.createElement('a');
-
-        anchor.href =
-            url;
-
-        anchor.download =
-            fileName;
-
-        document.body.appendChild(anchor);
-        anchor.click();
-        anchor.remove();
-
-        setTimeout(
-            () => URL.revokeObjectURL(url),
-            1000
-        );
-    }
-
-
-    window.addEventListener(
-        'resize',
-        resizeChart
-    );
-
-
-    /*
-     * از همان ابتدا چارت ایجاد می‌شود تا نوار قیمت راست
-     * همیشه قابل مشاهده باشد.
-     */
-    initChart();
-    syncCanvasInteractivity();
-
-</script>
+        // شروع اولیه
+        initChart();
+    </script>
 </body>
 </html>
