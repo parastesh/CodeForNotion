@@ -46,55 +46,91 @@
 <script>
 let chart, candleSeries, candles = [], timeScale = 60;
 
-// ---------- خواندن فایل ----------
 document.getElementById('csvFile').addEventListener('change', function(e) {
     const file = e.target.files[0];
     if (!file) return;
+    
     Papa.parse(file, {
-        header: true,
+        header: false, // بدون هدر می‌خوانیم تا به آرایه خطوط دسترسی مستقیم داشته باشیم
         skipEmptyLines: true,
-        complete: r => buildCandles(r.data)
+        complete: r => processCSV(r.data)
     });
 });
 
-// ---------- تبدیل ردیف‌های متاتریدر به کندل ----------
-function buildCandles(rows) {
-    // پاکسازی کلیدها (حذف کاراکترهای اضافی مثل BOM و گیومه)
-    const keys = Object.keys(rows[0]).map(k => k.replace(/["\uFEFF']/g, '').trim());
-    const find = (names) => keys.find(k => names.some(n => k.toLowerCase().includes(n))) || null;
+function processCSV(rows) {
+    if (rows.length < 2) {
+        alert('فایل خالی یا نامعتبر است.');
+        return;
+    }
 
-    const kDate  = find(['date']);
-    const kTime  = find(['time']) && find(['date']) !== find(['time']) ? find(['time']) : null;
-    const kOpen  = find(['open']);
-    const kHigh  = find(['high']);
-    const kLow   = find(['low']);
-    const kClose = find(['close']) || kOpen; // اگر Close نبود، از Open استفاده کن
+    // تشخیص اینکه آیا ردیف اول هدر است یا داده
+    let startIndex = 0;
+    const firstRowStr = rows[0].join(' ').toLowerCase();
+    if (firstRowStr.includes('open') || firstRowStr.includes('date') || firstRowStr.includes('time') || firstRowStr.includes('<')) {
+        startIndex = 1; // اگر هدر بود از خط دوم شروع کن
+    }
 
-    candles = rows.map(row => {
-        const get = key => key ? String(row[key] ?? row['"' + key + '"'] ?? '').replace(/["']/g, '').trim() : '';
-        // تاریخ متاتریدر معمولاً 2024.01.15 است → به 2024-01-15 تبدیل می‌شود
-        const d = get(kDate).replace(/\./g, '-');
-        const t = kTime ? get(kTime) : '00:00';
-        const ts = Math.floor(new Date(d + 'T' + (t.length === 5 ? t : t + ':00') + 'Z').getTime() / 1000);
-        return {
-            time: ts,
-            open:  +get(kOpen),
-            high:  +get(kHigh),
-            low:   +get(kLow),
-            close: +get(kClose)
-        };
-    })
-    .filter(c => !isNaN(c.time) && !isNaN(c.close))
-    .sort((a, b) => a.time - b.time);
+    candles = [];
+    for (let i = startIndex; i < rows.length; i++) {
+        const cols = rows[i];
+        if (cols.length < 5) continue; // حداقل ستون‌های لازم برای تاریخ، باز، بالا، پایین، بسته
 
-    // حذف تکراری‌ها
+        // جستجو برای پیدا کردن تاریخ و اعداد در ستون‌ها
+        let dateStr = '', timeStr = '00:00', open = NaN, high = NaN, low = NaN, close = NaN;
+
+        // تلاش برای استخراج فیلدها بر اساس الگوهای متداول متاتریدر
+        let numIndices = [];
+        let dateIndex = -1;
+
+        cols.forEach((val, idx) => {
+            val = val.trim().replace(/["']/g, '');
+            if (!dateStr && (val.includes('.') || val.includes('-') || val.includes('/')) && val.length >= 8) {
+                dateIndex = idx;
+                dateStr = val.replace(/\./g, '-').replace(/\//g, '-');
+            } else if (dateStr && timeStr === '00:00' && val.includes(':') && val.length <= 8) {
+                timeStr = val;
+            } else {
+                let num = parseFloat(val);
+                if (!isNaN(num)) {
+                    numIndices.push({ idx, val: num });
+                }
+            }
+        });
+
+        // اگر تاریخ پیدا نشد، ستون اول را به عنوان تاریخ در نظر بگیر
+        if (!dateStr && cols.length > 0) {
+            dateStr = cols[0].trim().replace(/\./g, '-');
+        }
+
+        // اگر اعداد پیدا شدند، آخرین عددها به ترتیب Open, High, Low, Close هستند
+        if (numIndices.length >= 4) {
+            const len = numIndices.length;
+            close = numIndices[len - 1].val;
+            low   = numIndices[len - 2].val;
+            high  = numIndices[len - 3].val;
+            open  = numIndices[len - 4].val;
+        }
+
+        if (dateStr && !isNaN(close) && !isNaN(open)) {
+            let fullDateTime = dateStr + 'T' + (timeStr.length === 5 ? timeStr : '00:00') + 'Z';
+            let ts = Math.floor(new Date(fullDateTime).getTime() / 1000);
+            if (isNaN(ts)) ts = i; // اگر تاریخ استاندارد نبود از ایندکس استفاده کن
+
+            candles.push({ time: ts, open, high, low, close });
+        }
+    }
+
+    // حذف تکراری‌ها و مرتب‌سازی
     candles = candles.filter((c, i, arr) => i === 0 || c.time > arr[i-1].time);
+    candles.sort((a, b) => a.time - b.time);
 
-    if (candles.length) drawChart();
-    else alert('ستون‌های OHLC در فایل پیدا نشدند. مطمئن شوید خروجی از MetaTrader با گزینه Bars است.');
+    if (candles.length > 0) {
+        drawChart();
+    } else {
+        alert('فرمت فایل متاتریدر شناخته نشد. لطفاً مطمئن شوید خروجی به صورت فایل CSV استاندارد متاتریدر است.');
+    }
 }
 
-// ---------- رسم چارت ----------
 function drawChart() {
     if (!chart) {
         chart = LightweightCharts.createChart(document.getElementById('chart'), {
@@ -114,7 +150,6 @@ function drawChart() {
             wickUpColor: '#26a69a', wickDownColor: '#ef5350',
         });
 
-        // نمایش قیمت و رنگ کندل زیر نشانگر ماوس
         chart.subscribeCrosshairMove(param => {
             const c = param.seriesData.get(candleSeries);
             const el = document.getElementById('legend');
@@ -133,7 +168,6 @@ function drawChart() {
     chart.timeScale().fitContent();
 }
 
-// ---------- انتخاب تایم‌فریم نمایشی (فشرده‌سازی کندل‌ها) ----------
 document.querySelectorAll('.tf-btn').forEach(btn => {
     btn.addEventListener('click', () => {
         document.querySelectorAll('.tf-btn').forEach(b => b.classList.remove('active'));
@@ -146,7 +180,6 @@ document.querySelectorAll('.tf-btn').forEach(btn => {
     });
 });
 
-// ادغام کندل‌های تکی در تایم‌فریم بزرگ‌تر (اگر فایل M1 باشد و H1 انتخاب شود)
 function aggregate(data, sec) {
     if (sec <= 60) return data;
     const map = new Map();
